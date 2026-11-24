@@ -23,7 +23,7 @@ const WORLD_JSON = JSON.parse(readNm('world-atlas/countries-110m.json'));
 
 const HOOK = `
 window.__sb = {
-  state, dom, ANCHOR_PLACES, pickDestination, nowPlayingSource, containsWord, MOODS, tuneMood, nextAlarmTime, fireAlarm, buildShareUrl, formatListen, recordListening, loadStats, FALLBACK_STATIONS, FEATURED_STATIONS, RADIO_MIRRORS, KNOWN_GENRES, FONT_THEMES,
+  state, dom, ANCHOR_PLACES, pickDestination, nowPlayingSource, containsWord, MOODS, tuneMood, nextAlarmTime, fireAlarm, geocodePlace, buildShareUrl, formatListen, recordListening, loadStats, FALLBACK_STATIONS, FEATURED_STATIONS, RADIO_MIRRORS, KNOWN_GENRES, FONT_THEMES,
   GLOBAL_CITY_ALIASES, COUNTRY_TERRESTRIAL_SEEDS,
   stripAccents, haversineKm, escapeHtml, mergeUnique, hashJitter, detectBroadcastBand,
   computeStreamReliability, normalizeStation, getLocalTimeInfo, getActivePlaceTerms,
@@ -97,6 +97,7 @@ function jsonResponse(data, ok = true, status = 200) {
  * @param {() => number} [opts.random]  deterministic Math.random
  * @param {(url:string) => any} [opts.nowPlaying]  JSON for api.somafm.com / api.kexp.org (may throw)
  * @param {boolean} [opts.mediaSession]  install a fake navigator.mediaSession + MediaMetadata (read back via app.media)
+ * @param {(q:string) => any} [opts.geocode]  Nominatim forward-search response for typed places
  * @param {string} [opts.url]  page URL (e.g. with a #share hash)
  * @param {(uuid:string) => any} [opts.byuuid]  Radio Browser byuuid response
  * @param {boolean|'abort'} [opts.share]  fake navigator.share (recorded in app.shared.share)
@@ -151,6 +152,7 @@ async function loadApp(opts = {}) {
       const body = opts.nominatim ? await opts.nominatim(Number(sp.get('lat')), Number(sp.get('lon')), u) : { address: { city: 'Testville', state: 'Test State', country: 'Testland', country_code: 'tl' } };
       return jsonResponse(body);
     }
+    if (u.startsWith('https://nominatim.openstreetmap.org/search')) return jsonResponse(opts.geocode ? await opts.geocode(new URL(u).searchParams.get('q')) : []);
     const bu = u.match(/^https:\/\/[a-z0-9]+\.api\.radio-browser\.info\/json\/stations\/byuuid\/(.+)$/);
     if (bu) return jsonResponse(opts.byuuid ? await opts.byuuid(decodeURIComponent(bu[1])) : []);
     const m = u.match(/^(https:\/\/[a-z0-9]+\.api\.radio-browser\.info)\/json\/stations\/search\?(.*)$/);

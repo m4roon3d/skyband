@@ -1591,7 +1591,7 @@
 
       async function runSmartOmnibox(rawQ) {
         const q = rawQ.trim(); dom.searchDropdown.classList.add('hidden');
-        if (!q) { state.searchQuery = ''; state.band = 'all'; state.genre = 'all'; loadStationsForScope(); return; }
+        if (!q) { state.searchQuery = ''; state.band = 'all'; state.genre = 'all'; updateLocationUI(); loadStationsForScope(); return; }
         const lower = q.toLowerCase(); let place = null, band = null, genre = null, rem = lower;
         if (/\bfm\b/.test(lower)) { band = 'fm'; rem = rem.replace(/\bfm\b/g, ' '); }
         else if (/\b(am|mw)\b/.test(lower)) { band = 'am'; rem = rem.replace(/\b(am|mw)\b/g, ' '); }
@@ -1607,10 +1607,41 @@
           jumpWithFlightArc(place, `Tuned: ${place.city}${band ? ' · ' + band.toUpperCase() : ''}${genre ? ' · ' + genre : ''}`, false);
           return;
         }
+        // Not one of our built-in cities: if what's left looks like a place name, fly there instead of only searching station names.
+        const placeText = rem.trim();
+        if (placeText.length >= 3 && placeText.length <= 40 && !/\d/.test(placeText)) {
+          const geo = await geocodePlace(placeText);
+          if (geo) {
+            state.band = band || 'all';
+            state.genre = genre && document.querySelector(`.genre-btn[data-genre="${genre}"]`) ? genre : 'all';
+            jumpWithFlightArc(geo, `Tuned: ${geo.city}${geo.country ? ', ' + geo.country : ''}`, false);
+            return;
+          }
+        }
         if (band) state.band = band;
         state.searchQuery = rem.trim().length >= 2 ? rem.trim() : q;
+        updateLocationUI();
         state.activeTab = 'explore';
         await loadStationsForScope();
+      }
+
+      // Forward geocode a typed place name (Nominatim). Returns a location or null; never throws.
+      async function geocodePlace(q) {
+        try {
+          const ctrl = new AbortController(), tid = setTimeout(() => ctrl.abort(), 4500);
+          const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&addressdetails=1&q=${encodeURIComponent(q)}`, { signal: ctrl.signal });
+          clearTimeout(tid);
+          if (!res.ok) return null;
+          const data = await res.json();
+          const r = Array.isArray(data) ? data[0] : null;
+          if (!r || !r.address || (r.class !== 'place' && r.class !== 'boundary') || !(Number(r.importance) >= 0.3)) return null;
+          const lat = Number(r.lat), lng = Number(r.lon);
+          if (!Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) return null;
+          const a = r.address;
+          const city = a.city || a.town || a.village || a.municipality || a.state || a.country;
+          if (!city) return null;
+          return { city: String(city).slice(0, 60), county: a.county || a.state_district || '', state: a.state || a.province || a.region || a.country || '', country: a.country || 'World', countryCode: String(a.country_code || '').toUpperCase().slice(0, 2), lat, lng };
+        } catch (_e) { return null; }
       }
 
       async function resolveLocationFromCoords(lat, lng, autoLoad) {
@@ -1739,8 +1770,9 @@
       // --- UI Updates ---
       function updateLocationUI() {
         const loc = state.location, t = getLocalTimeInfo(loc);
-        dom.locationHeading.textContent = state.scope === 'global' ? 'World Best' : state.scope === 'country' ? loc.country : state.scope === 'state' ? (loc.state || loc.country) : loc.city;
-        dom.locationSubline.textContent = `${[loc.state, loc.country].filter(Boolean).join(', ')} · ${t.timeLabel} (${t.period})`;
+        const sq = state.searchQuery.trim();
+        dom.locationHeading.textContent = sq ? `“${sq.slice(0, 40)}”` : state.scope === 'global' ? 'World Best' : state.scope === 'country' ? loc.country : state.scope === 'state' ? (loc.state || loc.country) : loc.city;
+        dom.locationSubline.textContent = sq ? 'Station search · worldwide' : `${[loc.state, loc.country].filter(Boolean).join(', ')} · ${t.timeLabel} (${t.period})`;
         dom.vibeLabel.textContent = state.vibeActive ? `${t.period} On` : t.period;
         dom.btnVibeMatch.className = state.vibeActive ? 'press text-[10.5px] font-bold px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-200 inline-flex items-center gap-1' : 'press text-[10.5px] font-semibold px-2 py-0.5 rounded-md bg-white/5 text-slate-300 hover:text-white inline-flex items-center gap-1';
         document.querySelectorAll('.scope-btn').forEach((btn) => {
@@ -1965,7 +1997,7 @@
         const m = MOODS.find((x) => x.id === id);
         if (!m) return;
         stopWorldTour(true);
-        state.scope = 'global'; state.activeTab = 'explore'; state.band = 'all'; state.genre = 'all'; state.searchQuery = m.tag;
+        state.scope = 'global'; state.activeTab = 'explore'; state.band = 'all'; state.genre = 'all'; state.searchQuery = m.tag; updateLocationUI();
         dom.searchInput.value = m.tag; dom.searchClearBtn.classList.remove('hidden');
         showToast(`${m.label} mood · worldwide`);
         loadStationsForScope(true);
@@ -2308,7 +2340,7 @@
 
         dom.searchInput.addEventListener('input', () => { dom.searchClearBtn.classList.toggle('hidden', !dom.searchInput.value); renderSearchDropdown(dom.searchInput.value); });
         dom.searchInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); runSmartOmnibox(dom.searchInput.value); } });
-        dom.searchClearBtn.addEventListener('click', () => { dom.searchInput.value = ''; state.searchQuery = ''; dom.searchClearBtn.classList.add('hidden'); dom.searchDropdown.classList.add('hidden'); loadStationsForScope(); });
+        dom.searchClearBtn.addEventListener('click', () => { dom.searchInput.value = ''; state.searchQuery = ''; dom.searchClearBtn.classList.add('hidden'); dom.searchDropdown.classList.add('hidden'); updateLocationUI(); loadStationsForScope(); });
         dom.searchDropdown.addEventListener('click', (e) => {
           const p = e.target.closest('[data-pick-place]');
           if (p) { const pl = ANCHOR_PLACES.find((x) => x.city === p.dataset.pickPlace); if (pl) jumpWithFlightArc(pl, null, false); dom.searchDropdown.classList.add('hidden'); return; }
