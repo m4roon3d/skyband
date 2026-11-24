@@ -274,6 +274,17 @@
             <span id="tour-status-tag" class="font-mono-tech text-[9px] px-1.5 py-0.5 rounded bg-white/10 text-slate-300">OFF</span>
           </div>
         </button>
+        <button id="btn-install" type="button" class="hidden w-full text-left px-3 py-2 rounded-xl hover:bg-white/10 flex items-center gap-2.5 transition">
+          <i data-lucide="download" class="w-4 h-4 text-sky-300 shrink-0"></i>
+          <div>
+            <div class="text-xs font-semibold text-white">Install skyband</div>
+            <div id="install-hint" class="text-[10.5px] text-slate-400">Add it to your home screen or desktop</div>
+          </div>
+        </button>
+        <div class="border-t border-white/10 pt-1.5 mt-1 px-2">
+          <span class="block text-[10px] text-slate-500 px-1 mb-1">Mood radio · worldwide</span>
+          <div id="mood-chips" class="flex flex-wrap gap-1"></div>
+        </div>
         <div class="border-t border-white/10 pt-1.5 mt-1 px-2 flex flex-wrap gap-1">
           <span class="w-full text-[10px] text-slate-500 px-1 mb-0.5">Quick Hop</span>
           <div id="quick-cities" class="flex flex-wrap gap-1"></div>
@@ -478,6 +489,16 @@
             </select>
           </div>
         </div>
+        <div class="border-t border-white/10 pt-2.5 space-y-1.5">
+          <div class="flex items-center justify-between gap-2">
+            <span class="text-slate-300">Wake-up Alarm</span>
+            <div class="flex items-center gap-1.5">
+              <input id="alarm-time" type="time" value="07:00" aria-label="Alarm time" class="bg-black/50 border border-white/10 rounded-lg px-1.5 py-0.5 text-[11px] text-slate-200 outline-none" />
+              <button id="alarm-toggle" type="button" class="press px-2 py-0.5 rounded-lg bg-[#ff7a18]/20 hover:bg-[#ff7a18]/35 text-[#ff7a18] text-[11px] font-bold">Set</button>
+            </div>
+          </div>
+          <div id="alarm-status" class="text-[10px] text-slate-500">Off · plays your current station. Keep this tab open.</div>
+        </div>
       </div>
     </div>
   </div>
@@ -528,6 +549,89 @@
         { city: 'Johannesburg', county: 'City of Johannesburg', state: 'Gauteng', country: 'South Africa', countryCode: 'ZA', lat: -26.2041, lng: 28.0473, tz: 'Africa/Johannesburg' },
         { city: 'Bangkok', county: 'Phra Nakhon', state: 'Bangkok', country: 'Thailand', countryCode: 'TH', lat: 13.7563, lng: 100.5018, tz: 'Asia/Bangkok' }
       ];
+
+      // More stops for Spin / World Tour. [city, state/region, country, ISO code, lat, lng, IANA tz]
+      const EXTRA_ANCHOR_ROWS = [
+        ['Kolkata','West Bengal','India','IN',22.5726,88.3639,'Asia/Kolkata'],
+        ['Chennai','Tamil Nadu','India','IN',13.0827,80.2707,'Asia/Kolkata'],
+        ['Los Angeles','California','United States','US',34.0522,-118.2437,'America/Los_Angeles'],
+        ['Chicago','Illinois','United States','US',41.8781,-87.6298,'America/Chicago'],
+        ['Toronto','Ontario','Canada','CA',43.6532,-79.3832,'America/Toronto'],
+        ['Vancouver','British Columbia','Canada','CA',49.2827,-123.1207,'America/Vancouver'],
+        ['Mexico City','Mexico City','Mexico','MX',19.4326,-99.1332,'America/Mexico_City'],
+        ['Havana','La Habana','Cuba','CU',23.1136,-82.3666,'America/Havana'],
+        ['Kingston','Surrey','Jamaica','JM',17.9712,-76.7936,'America/Jamaica'],
+        ['Bogotá','Bogotá','Colombia','CO',4.7110,-74.0721,'America/Bogota'],
+        ['Lima','Lima','Peru','PE',-12.0464,-77.0428,'America/Lima'],
+        ['Santiago','Santiago Metropolitan','Chile','CL',-33.4489,-70.6693,'America/Santiago'],
+        ['Buenos Aires','Buenos Aires','Argentina','AR',-34.6037,-58.3816,'America/Argentina/Buenos_Aires'],
+        ['São Paulo','São Paulo','Brazil','BR',-23.5505,-46.6333,'America/Sao_Paulo'],
+        ['Rio de Janeiro','Rio de Janeiro','Brazil','BR',-22.9068,-43.1729,'America/Sao_Paulo'],
+        ['Montevideo','Montevideo','Uruguay','UY',-34.9011,-56.1645,'America/Montevideo'],
+        ['Madrid','Community of Madrid','Spain','ES',40.4168,-3.7038,'Europe/Madrid'],
+        ['Lisbon','Lisbon','Portugal','PT',38.7223,-9.1393,'Europe/Lisbon'],
+        ['Amsterdam','North Holland','Netherlands','NL',52.3676,4.9041,'Europe/Amsterdam'],
+        ['Brussels','Brussels','Belgium','BE',50.8503,4.3517,'Europe/Brussels'],
+        ['Zürich','Zürich','Switzerland','CH',47.3769,8.5417,'Europe/Zurich'],
+        ['Vienna','Vienna','Austria','AT',48.2082,16.3738,'Europe/Vienna'],
+        ['Prague','Prague','Czechia','CZ',50.0755,14.4378,'Europe/Prague'],
+        ['Warsaw','Masovian','Poland','PL',52.2297,21.0122,'Europe/Warsaw'],
+        ['Budapest','Budapest','Hungary','HU',47.4979,19.0402,'Europe/Budapest'],
+        ['Stockholm','Stockholm','Sweden','SE',59.3293,18.0686,'Europe/Stockholm'],
+        ['Oslo','Oslo','Norway','NO',59.9139,10.7522,'Europe/Oslo'],
+        ['Helsinki','Uusimaa','Finland','FI',60.1699,24.9384,'Europe/Helsinki'],
+        ['Copenhagen','Capital Region','Denmark','DK',55.6761,12.5683,'Europe/Copenhagen'],
+        ['Reykjavík','Capital Region','Iceland','IS',64.1466,-21.9426,'Atlantic/Reykjavik'],
+        ['Dublin','Leinster','Ireland','IE',53.3498,-6.2603,'Europe/Dublin'],
+        ['Athens','Attica','Greece','GR',37.9838,23.7275,'Europe/Athens'],
+        ['Istanbul','Istanbul','Türkiye','TR',41.0082,28.9784,'Europe/Istanbul'],
+        ['Kyiv','Kyiv','Ukraine','UA',50.4501,30.5234,'Europe/Kyiv'],
+        ['Moscow','Moscow','Russia','RU',55.7558,37.6173,'Europe/Moscow'],
+        ['Cairo','Cairo','Egypt','EG',30.0444,31.2357,'Africa/Cairo'],
+        ['Marrakesh','Marrakesh-Safi','Morocco','MA',31.6295,-7.9811,'Africa/Casablanca'],
+        ['Lagos','Lagos','Nigeria','NG',6.5244,3.3792,'Africa/Lagos'],
+        ['Accra','Greater Accra','Ghana','GH',5.6037,-0.1870,'Africa/Accra'],
+        ['Dakar','Dakar','Senegal','SN',14.7167,-17.4677,'Africa/Dakar'],
+        ['Nairobi','Nairobi','Kenya','KE',-1.2921,36.8219,'Africa/Nairobi'],
+        ['Addis Ababa','Addis Ababa','Ethiopia','ET',9.0300,38.7400,'Africa/Addis_Ababa'],
+        ['Cape Town','Western Cape','South Africa','ZA',-33.9249,18.4241,'Africa/Johannesburg'],
+        ['Dubai','Dubai','United Arab Emirates','AE',25.2048,55.2708,'Asia/Dubai'],
+        ['Tel Aviv','Tel Aviv District','Israel','IL',32.0853,34.7818,'Asia/Jerusalem'],
+        ['Tehran','Tehran','Iran','IR',35.6892,51.3890,'Asia/Tehran'],
+        ['Karachi','Sindh','Pakistan','PK',24.8607,67.0011,'Asia/Karachi'],
+        ['Dhaka','Dhaka','Bangladesh','BD',23.8103,90.4125,'Asia/Dhaka'],
+        ['Colombo','Western Province','Sri Lanka','LK',6.9271,79.8612,'Asia/Colombo'],
+        ['Kathmandu','Bagmati','Nepal','NP',27.7172,85.3240,'Asia/Kathmandu'],
+        ['Almaty','Almaty','Kazakhstan','KZ',43.2220,76.8512,'Asia/Almaty'],
+        ['Jakarta','Jakarta','Indonesia','ID',-6.2088,106.8456,'Asia/Jakarta'],
+        ['Manila','Metro Manila','Philippines','PH',14.5995,120.9842,'Asia/Manila'],
+        ['Hanoi','Hanoi','Vietnam','VN',21.0278,105.8342,'Asia/Ho_Chi_Minh'],
+        ['Kuala Lumpur','Federal Territory','Malaysia','MY',3.1390,101.6869,'Asia/Kuala_Lumpur'],
+        ['Hong Kong','Hong Kong','Hong Kong','HK',22.3193,114.1694,'Asia/Hong_Kong'],
+        ['Seoul','Seoul','South Korea','KR',37.5665,126.9780,'Asia/Seoul'],
+        ['Taipei','Taipei','Taiwan','TW',25.0330,121.5654,'Asia/Taipei'],
+        ['Shanghai','Shanghai','China','CN',31.2304,121.4737,'Asia/Shanghai'],
+        ['Ulaanbaatar','Ulaanbaatar','Mongolia','MN',47.8864,106.9057,'Asia/Ulaanbaatar'],
+        ['Sydney','New South Wales','Australia','AU',-33.8688,151.2093,'Australia/Sydney'],
+        ['Melbourne','Victoria','Australia','AU',-37.8136,144.9631,'Australia/Melbourne'],
+        ['Perth','Western Australia','Australia','AU',-31.9505,115.8605,'Australia/Perth'],
+        ['Auckland','Auckland','New Zealand','NZ',-36.8509,174.7645,'Pacific/Auckland'],
+        ['Honolulu','Hawaii','United States','US',21.3099,-157.8581,'Pacific/Honolulu'],
+        ['Anchorage','Alaska','United States','US',61.2181,-149.9003,'America/Anchorage']
+      ].map(([city, state, country, countryCode, lat, lng, tz]) => ({ city, county: city, state, country, countryCode, lat, lng, tz }));
+      ANCHOR_PLACES.push(...EXTRA_ANCHOR_ROWS);
+
+      // Next stop for Spin / World Tour: prefer a country the listener hasn't collected yet,
+      // and never the country they're currently in.
+      function pickDestination() {
+        const here = state.location && state.location.country;
+        const others = ANCHOR_PLACES.filter((p) => p.city !== (state.location && state.location.city));
+        const visited = new Set((state.passportCountries || []).map((c) => String(c.country).toLowerCase()));
+        const fresh = others.filter((p) => p.country !== here && !visited.has(p.country.toLowerCase()));
+        const abroad = others.filter((p) => p.country !== here);
+        const pool = fresh.length ? fresh : (abroad.length ? abroad : others);
+        return pool[Math.floor(Math.random() * pool.length)] || ANCHOR_PLACES[0];
+      }
 
       const FALLBACK_STATIONS = [
         {
@@ -641,6 +745,8 @@
         tourActive: false,
         tourSecondsLeft: 45,
         tourIntervalId: null,
+        nowPlaying: null,
+        alarmAt: null,
         ambientFx: 'off',
         fontTheme: loadStored('skyband_font', 'modern'),
         diagnostics: { mirror: 'Pending...', queriesRun: [], totalRaw: 0, fmCount: 0, amCount: 0, hlsCount: 0, highSignalCount: 0 }
@@ -672,6 +778,9 @@
         btnLocate: document.getElementById('btn-locate'),
         btnExplore: document.getElementById('btn-explore'),
         explorePopover: document.getElementById('explore-popover'),
+        moodChips: document.getElementById('mood-chips'),
+        btnInstall: document.getElementById('btn-install'),
+        installHint: document.getElementById('install-hint'),
         modeSpinGlobe: document.getElementById('mode-spin-globe'),
         modeFollowNight: document.getElementById('mode-follow-night'),
         modeGoldenHour: document.getElementById('mode-golden-hour'),
@@ -716,6 +825,9 @@
         ambientVolume: document.getElementById('ambient-volume'),
         sleepSelect: document.getElementById('sleep-timer-select'),
         sleepCountdown: document.getElementById('sleep-countdown'),
+        alarmTime: document.getElementById('alarm-time'),
+        alarmToggle: document.getElementById('alarm-toggle'),
+        alarmStatus: document.getElementById('alarm-status'),
         toast: document.getElementById('toast'),
         toastMessage: document.getElementById('toast-message'),
         toastAction: document.getElementById('toast-action')
@@ -723,6 +835,32 @@
 
       function loadStored(k, fb) { try { const r = localStorage.getItem(k); return r ? JSON.parse(r) : fb; } catch (_e) { return fb; } }
       function saveStored(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (_e) {} }
+
+      // Remember where the listener left off (place, scope, last station). Restored without autoplay.
+      const LAST_KEY = 'skyband_last';
+      const VALID_SCOPES = ['nearby', 'city', 'state', 'country', 'global'];
+      function saveLast() {
+        const st = state.currentStation;
+        saveStored(LAST_KEY, { location: state.location, scope: state.scope, station: st && st.url_resolved ? st : null });
+      }
+      function restoreLast() {
+        const saved = loadStored(LAST_KEY, null);
+        if (!saved || typeof saved !== 'object') return;
+        const l = saved.location;
+        if (l && typeof l.city === 'string' && Number.isFinite(l.lat) && Number.isFinite(l.lng) && Math.abs(l.lat) <= 90 && Math.abs(l.lng) <= 180) {
+          state.location = { ...state.location, ...l };
+        }
+        if (VALID_SCOPES.includes(saved.scope)) state.scope = saved.scope;
+        const st = saved.station;
+        if (st && typeof st.url_resolved === 'string' && /^https?:\/\//i.test(st.url_resolved) && typeof st.stationuuid === 'string') {
+          state.currentStation = st;
+        }
+      }
+      // Whole-word match, so 'lima' does not fire inside 'climate' or 'rome' inside 'chrome'.
+      function containsWord(text, word) {
+        const esc = String(word).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        return new RegExp(`(^|[^\\p{L}\\p{N}])${esc}($|[^\\p{L}\\p{N}])`, 'u').test(text);
+      }
       function stripAccents(s) { return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, ''); }
       function haversineKm(a, b, c, d) {
         if (a == null || b == null || c == null || d == null) return null;
@@ -1291,6 +1429,7 @@
       let loadSeq = 0; // only the most recent load may publish results (older, slower responses are dropped)
       async function loadStationsForScope(autoPlayBest) {
         const seq = ++loadSeq;
+        saveLast();
         state.isFetching = true; state.usingFallback = false; state.diagnostics.queriesRun = [];
         renderStationList();
         try {
@@ -1403,8 +1542,7 @@
       }
 
       function flyNextTourStop() {
-        const others = ANCHOR_PLACES.filter((p) => p.city !== state.location.city);
-        const next = others[Math.floor(Math.random() * others.length)] || ANCHOR_PLACES[0];
+        const next = pickDestination();
         state.tourSecondsLeft = 45; dom.tourCountdown.textContent = '45s';
         jumpWithFlightArc(next, `World Tour → ${next.city}, ${next.country}`, true);
       }
@@ -1443,7 +1581,7 @@
         else { for (const g of KNOWN_GENRES) { if (new RegExp(`\\b${g}\\b`, 'i').test(lower)) { genre = g; rem = rem.replace(new RegExp(`\\b${g}\\b`, 'gi'), ' '); break; } } }
         for (const p of ANCHOR_PLACES) {
           const names = [p.city.toLowerCase(), p.state.toLowerCase(), p.country.toLowerCase(), ...(GLOBAL_CITY_ALIASES[p.city.toLowerCase()] || [])];
-          if (names.some((n) => n.length >= 3 && lower.includes(n))) { place = p; break; }
+          if (names.some((n) => n.length >= 3 && containsWord(lower, n))) { place = p; break; }
         }
         if (place) {
           state.band = band || 'all';
@@ -1505,7 +1643,7 @@
         if (state.currentStation && state.currentStation.stationuuid === st.stationuuid && state.isPlaying) { dom.audio.pause(); return; }
         state.currentStation = st; state.isLoadingAudio = true; state.isPlaying = false;
         state.recent = [st, ...state.recent.filter((r) => r.stationuuid !== st.stationuuid)].slice(0, 25);
-        updatePlayerUI(); renderStationList();
+        saveLast(); updatePlayerUI(); renderStationList();
         clearStall();
         state.stallTimeoutId = setTimeout(() => { if (state.isLoadingAudio && state.currentStation && state.currentStation.stationuuid === st.stationuuid) handleStreamError(st); }, 7000);
         try {
@@ -1680,6 +1818,7 @@
         const sig = computeStreamReliability(st);
         dom.playerTitle.textContent = st.name; dom.playerSignalSlot.innerHTML = renderSignalInline(sig);
         dom.playerSubtitle.textContent = [st.freqLabel !== 'WEB' ? st.freqLabel : null, st.state || st.country, `${st.codec}${st.bitrate ? ' ' + st.bitrate + 'k' : ''}`].filter(Boolean).join(' · ');
+        if (state.nowPlaying && state.nowPlaying.uuid === st.stationuuid && state.nowPlaying.text) dom.playerSubtitle.textContent = '♪ ' + state.nowPlaying.text;
         const isFav = state.favorites.some((f) => f.stationuuid === st.stationuuid);
         dom.playerFavBtn.className = isFav ? 'press w-8 h-8 rounded-full bg-rose-500/15 text-rose-400 flex items-center justify-center' : 'press w-8 h-8 rounded-full hover:bg-white/10 text-slate-400 flex items-center justify-center';
         if (override === 'ERROR') dom.playerLed.className = 'w-2.5 h-2.5 rounded-full bg-rose-500 shrink-0';
@@ -1688,6 +1827,91 @@
         else dom.playerLed.className = 'w-2.5 h-2.5 rounded-full bg-slate-500 shrink-0';
         dom.btnPlayPause.innerHTML = `<i data-lucide="${state.isPlaying ? 'pause' : 'play'}" class="w-4 h-4 fill-current"></i>`;
         if (window.lucide) window.lucide.createIcons();
+        updateMediaSession(); syncNowPlayingPoll();
+      }
+
+      // ---- Now playing (track names) -------------------------------------------------
+      // Only stations whose operators publish an open, CORS-friendly feed are supported (SomaFM, KEXP).
+      // Everything fails silently: no track name just means the normal station subtitle stays.
+      const NOW_PLAYING_POLL_MS = 30000;
+      let nowPlayingTimer = null, nowPlayingSeq = 0;
+
+      function nowPlayingSource(st) {
+        const url = String((st && st.url_resolved) || '');
+        let m = url.match(/^https?:\/\/[^/]*somafm\.com\/([a-z0-9]+?)(?:-\d+)?(?:-(?:mp3|aac|aacp))?(?:[/?.]|$)/i);
+        if (m) return { kind: 'soma', id: m[1].toLowerCase() };
+        if (/^https?:\/\/[^/]*kexp[^/]*\//i.test(url)) return { kind: 'kexp' };
+        return null;
+      }
+
+      async function fetchNowPlayingText(src) {
+        if (src.kind === 'soma') {
+          const r = await fetch('https://api.somafm.com/channels.json');
+          if (!r.ok) return '';
+          const j = await r.json();
+          const ch = ((j && j.channels) || []).find((c) => c && c.id === src.id);
+          return ch && typeof ch.lastPlaying === 'string' ? ch.lastPlaying : '';
+        }
+        if (src.kind === 'kexp') {
+          const r = await fetch('https://api.kexp.org/v2/plays/?limit=1');
+          if (!r.ok) return '';
+          const j = await r.json();
+          const p = j && j.results && j.results[0];
+          if (!p || p.play_type !== 'trackplay' || !p.song) return '';
+          return p.artist ? `${p.artist} — ${p.song}` : String(p.song);
+        }
+        return '';
+      }
+
+      async function refreshNowPlaying() {
+        const st = state.currentStation;
+        const src = nowPlayingSource(st);
+        if (!st || !src) return;
+        const seq = ++nowPlayingSeq, uuid = st.stationuuid;
+        try {
+          const text = String(await fetchNowPlayingText(src) || '').trim().slice(0, 140);
+          if (seq !== nowPlayingSeq || !state.currentStation || state.currentStation.stationuuid !== uuid) return;
+          if (!text) { if (state.nowPlaying) { state.nowPlaying = null; updatePlayerUI(); } return; }
+          if (!state.nowPlaying || state.nowPlaying.uuid !== uuid || state.nowPlaying.text !== text) { state.nowPlaying = { uuid, text }; updatePlayerUI(); }
+        } catch (_e) { /* offline / blocked: keep the normal subtitle */ }
+      }
+
+      function syncNowPlayingPoll() {
+        const st = state.currentStation;
+        const active = state.isPlaying && st && nowPlayingSource(st);
+        if (state.nowPlaying && (!st || state.nowPlaying.uuid !== st.stationuuid)) state.nowPlaying = null;
+        if (!active) { if (nowPlayingTimer) { clearInterval(nowPlayingTimer); nowPlayingTimer = null; } return; }
+        if (nowPlayingTimer) return;
+        refreshNowPlaying();
+        nowPlayingTimer = setInterval(refreshNowPlaying, NOW_PLAYING_POLL_MS);
+      }
+
+      // ---- Lock-screen / headset controls (Media Session) -----------------------------
+      let mediaSessionBound = false;
+      function updateMediaSession() {
+        const ms = typeof navigator !== 'undefined' && navigator.mediaSession;
+        if (!ms) return;
+        const st = state.currentStation;
+        try {
+          if (!mediaSessionBound) {
+            mediaSessionBound = true;
+            const bind = (a, fn) => { try { ms.setActionHandler(a, fn); } catch (_e) {} };
+            bind('play', () => { if (state.currentStation && !state.isPlaying) playStation(state.currentStation); });
+            bind('pause', () => { if (state.isPlaying) dom.audio.pause(); });
+            bind('stop', () => { if (state.isPlaying) dom.audio.pause(); });
+            bind('previoustrack', () => playAdjacent(-1));
+            bind('nexttrack', () => playAdjacent(1));
+          }
+          if (!st) { ms.metadata = null; return; }
+          const track = state.nowPlaying && state.nowPlaying.uuid === st.stationuuid ? state.nowPlaying.text : '';
+          if (typeof window.MediaMetadata === 'function') {
+            ms.metadata = new window.MediaMetadata({
+              title: track || st.name, artist: track ? st.name : [st.state, st.country].filter(Boolean).join(', '), album: 'skyband',
+              artwork: [{ src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png' }, { src: 'icons/icon-512.png', sizes: '512x512', type: 'image/png' }]
+            });
+          }
+          ms.playbackState = state.isPlaying ? 'playing' : 'paused';
+        } catch (_e) { /* Media Session is a nicety, never break playback */ }
       }
 
       function renderQuickCities() {
@@ -1706,6 +1930,26 @@
         dom.searchDropdown.innerHTML = html; dom.searchDropdown.classList.remove('hidden');
       }
 
+      // Mood radio: each mood is a worldwide Radio Browser tag search.
+      const MOODS = [
+        { id: 'focus', label: 'Focus', tag: 'ambient' }, { id: 'chill', label: 'Chill', tag: 'chillout' },
+        { id: 'cozy', label: 'Cozy', tag: 'jazz' }, { id: 'party', label: 'Party', tag: 'dance' },
+        { id: 'workout', label: 'Workout', tag: 'electronic' }, { id: 'classical', label: 'Classical', tag: 'classical' },
+        { id: 'sleep', label: 'Sleep', tag: 'meditation' }, { id: 'world', label: 'World', tag: 'world' }
+      ];
+      function renderMoodChips() {
+        dom.moodChips.innerHTML = MOODS.map((m) => `<button type="button" data-mood="${escapeHtml(m.id)}" class="press px-2 py-0.5 rounded-lg bg-white/5 hover:bg-[#ff7a18] hover:text-slate-950 text-[10.5px] font-medium text-slate-300">${escapeHtml(m.label)}</button>`).join('');
+      }
+      function tuneMood(id) {
+        const m = MOODS.find((x) => x.id === id);
+        if (!m) return;
+        stopWorldTour(true);
+        state.scope = 'global'; state.activeTab = 'explore'; state.band = 'all'; state.genre = 'all'; state.searchQuery = m.tag;
+        dom.searchInput.value = m.tag; dom.searchClearBtn.classList.remove('hidden');
+        showToast(`${m.label} mood · worldwide`);
+        loadStationsForScope(true);
+      }
+
       function setSleepTimer(min) {
         if (state.sleepIntervalId) { clearInterval(state.sleepIntervalId); state.sleepIntervalId = null; }
         state.sleepSecondsLeft = min * 60;
@@ -1718,6 +1962,100 @@
           if (state.sleepSecondsLeft <= 0) { clearInterval(state.sleepIntervalId); state.sleepIntervalId = null; dom.sleepSelect.value = '0'; dom.sleepCountdown.classList.add('hidden'); dom.audio.pause(); showToast('Sleep timer finished'); }
           else tick();
         }, 1000);
+      }
+
+      // ---- Wake-up alarm ------------------------------------------------------------
+      // Browsers can't wake a sleeping phone or closed tab, so this only rings while skyband is open.
+      const ALARM_KEY = 'skyband_alarm';
+      const ALARM_GRACE_MS = 15 * 60 * 1000; // rang late because the device slept: still play if within 15 min
+      let alarmTimerId = null;
+
+      function nextAlarmTime(hhmm, from) {
+        const m = /^(\d{1,2}):(\d{2})$/.exec(String(hhmm || ''));
+        if (!m) return null;
+        const h = Number(m[1]), min = Number(m[2]);
+        if (h > 23 || min > 59) return null;
+        const d = new Date(from); d.setHours(h, min, 0, 0);
+        if (d.getTime() <= from) d.setDate(d.getDate() + 1);
+        return d.getTime();
+      }
+
+      function renderAlarm() {
+        if (!state.alarmAt) { dom.alarmToggle.textContent = 'Set'; dom.alarmStatus.textContent = 'Off · plays your current station. Keep this tab open.'; return; }
+        const mins = Math.max(0, Math.round((state.alarmAt - Date.now()) / 60000));
+        dom.alarmToggle.textContent = 'Cancel';
+        dom.alarmStatus.textContent = `Rings in ${Math.floor(mins / 60)}h ${String(mins % 60).padStart(2, '0')}m · keep this tab open`;
+      }
+
+      function fireAlarm(late) {
+        state.alarmAt = null; saveStored(ALARM_KEY, null); renderAlarm();
+        if (alarmTimerId) { clearInterval(alarmTimerId); alarmTimerId = null; }
+        if (late) { showToast('Your wake-up alarm was missed while the device was asleep'); return; }
+        showToast('Good morning! Wake-up alarm');
+        if (state.isPlaying) return;
+        const st = state.currentStation || getVisibleStations().find((x) => x.url_resolved) || FEATURED_STATIONS.map(normalizeStation)[0];
+        if (st) playStation(st);
+      }
+
+      function alarmTick() {
+        if (!state.alarmAt) return;
+        const now = Date.now();
+        if (now >= state.alarmAt) fireAlarm(now - state.alarmAt > ALARM_GRACE_MS); else renderAlarm();
+      }
+
+      function armAlarm(at) {
+        state.alarmAt = at; saveStored(ALARM_KEY, at);
+        if (alarmTimerId) clearInterval(alarmTimerId);
+        alarmTimerId = at ? setInterval(alarmTick, 10000) : null;
+        renderAlarm();
+      }
+
+      function toggleAlarm() {
+        if (state.alarmAt) { armAlarm(null); showToast('Alarm cancelled'); return; }
+        const at = nextAlarmTime(dom.alarmTime.value, Date.now());
+        if (!at) { showToast('Pick an alarm time first'); return; }
+        armAlarm(at);
+        showToast(`Alarm set for ${dom.alarmTime.value}`);
+      }
+
+      function restoreAlarm() {
+        const at = Number(loadStored(ALARM_KEY, null));
+        if (!Number.isFinite(at) || at <= 0) return;
+        if (Date.now() - at > ALARM_GRACE_MS) { saveStored(ALARM_KEY, null); return; } // long gone
+        armAlarm(at); alarmTick();
+      }
+
+      // ---- Install as an app (PWA) ---------------------------------------------------
+      let deferredInstall = null;
+      function isStandalone() {
+        return Boolean((window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone);
+      }
+      function isIosSafari() {
+        const ua = window.navigator.userAgent || '';
+        return /iPad|iPhone|iPod/.test(ua) && !/CriOS|FxiOS|EdgiOS/.test(ua);
+      }
+      function updateInstallUI() {
+        const show = !isStandalone() && (Boolean(deferredInstall) || isIosSafari());
+        dom.btnInstall.classList.toggle('hidden', !show);
+        dom.installHint.textContent = deferredInstall ? 'Add it to your home screen or desktop' : 'Tap Share, then "Add to Home Screen"';
+      }
+      async function onInstallClick() {
+        if (deferredInstall) {
+          const ev = deferredInstall; deferredInstall = null; updateInstallUI();
+          try { ev.prompt(); await ev.userChoice; } catch (_e) { /* user dismissed or browser refused */ }
+          return;
+        }
+        if (isIosSafari()) showToast('Tap the Share button, then "Add to Home Screen"');
+      }
+      function initInstall() {
+        window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredInstall = e; updateInstallUI(); });
+        window.addEventListener('appinstalled', () => { deferredInstall = null; updateInstallUI(); showToast('skyband installed'); });
+        dom.btnInstall.addEventListener('click', onInstallClick);
+        updateInstallUI();
+        // The service worker only makes skyband installable; it caches nothing. Needs https (or localhost).
+        if ('serviceWorker' in window.navigator && /^(https:|http:\/\/localhost)/.test(window.location.href)) {
+          window.navigator.serviceWorker.register('sw.js').catch(() => {});
+        }
       }
 
       function showToast(msg, actionText, actionFn) {
@@ -1778,6 +2116,7 @@
         dom.modeFollowNight.addEventListener('click', followTheNight);
         dom.modeGoldenHour.addEventListener('click', followGoldenHour);
         dom.modeWorldTour.addEventListener('click', toggleWorldTour);
+        dom.moodChips.addEventListener('click', (ev) => { const b = ev.target.closest('[data-mood]'); if (!b) return; dom.explorePopover.classList.add('hidden'); tuneMood(b.dataset.mood); });
         dom.btnTourSkip.addEventListener('click', flyNextTourStop);
         dom.btnTourStop.addEventListener('click', () => stopWorldTour(false));
 
@@ -1865,6 +2204,7 @@
         dom.playerFavBtn.addEventListener('click', () => { if (state.currentStation) toggleFavorite(state.currentStation); });
         dom.volumeSlider.addEventListener('input', () => { dom.audio.volume = Number(dom.volumeSlider.value); dom.audio.muted = dom.audio.volume === 0; updateVolumeIcon(); });
         dom.btnMute.addEventListener('click', () => { dom.audio.muted = !dom.audio.muted; updateVolumeIcon(); });
+        dom.alarmToggle.addEventListener('click', toggleAlarm);
         dom.sleepSelect.addEventListener('change', () => setSleepTimer(Number(dom.sleepSelect.value) || 0));
 
         dom.audio.addEventListener('playing', () => {
@@ -1900,8 +2240,7 @@
 
       function spinGlobe() {
         stopWorldTour(true);
-        const others = ANCHOR_PLACES.filter((p) => p.city !== state.location.city);
-        const pick = others[Math.floor(Math.random() * others.length)] || ANCHOR_PLACES[0];
+        const pick = pickDestination();
         jumpWithFlightArc(pick, `Landed in ${pick.city}, ${pick.country}`, false);
       }
 
@@ -1938,9 +2277,10 @@
       function init() {
         if (window.lucide) window.lucide.createIcons();
         applyFontTheme(state.fontTheme);
+        restoreLast();
         const fs = document.getElementById('font-switcher');
         if (fs) fs.addEventListener('click', (e) => { const b = e.target.closest('.font-opt-btn'); if (b) applyFontTheme(b.dataset.font); });
-        renderQuickCities(); renderPassport(); updateAmbientUI(); updateLocationUI(); updatePlayerUI();
+        renderQuickCities(); renderMoodChips(); renderPassport(); restoreAlarm(); initInstall(); updateAmbientUI(); updateLocationUI(); updatePlayerUI();
         bindEvents(); initVectorMap(); loadStationsForScope();
       }
 
