@@ -23,7 +23,7 @@ const WORLD_JSON = JSON.parse(readNm('world-atlas/countries-110m.json'));
 
 const HOOK = `
 window.__sb = {
-  state, dom, ANCHOR_PLACES, pickDestination, nowPlayingSource, containsWord, MOODS, tuneMood, nextAlarmTime, fireAlarm, FALLBACK_STATIONS, FEATURED_STATIONS, RADIO_MIRRORS, KNOWN_GENRES, FONT_THEMES,
+  state, dom, ANCHOR_PLACES, pickDestination, nowPlayingSource, containsWord, MOODS, tuneMood, nextAlarmTime, fireAlarm, buildShareUrl, formatListen, recordListening, loadStats, FALLBACK_STATIONS, FEATURED_STATIONS, RADIO_MIRRORS, KNOWN_GENRES, FONT_THEMES,
   GLOBAL_CITY_ALIASES, COUNTRY_TERRESTRIAL_SEEDS,
   stripAccents, haversineKm, escapeHtml, mergeUnique, hashJitter, detectBroadcastBand,
   computeStreamReliability, normalizeStation, getLocalTimeInfo, getActivePlaceTerms,
@@ -97,6 +97,10 @@ function jsonResponse(data, ok = true, status = 200) {
  * @param {() => number} [opts.random]  deterministic Math.random
  * @param {(url:string) => any} [opts.nowPlaying]  JSON for api.somafm.com / api.kexp.org (may throw)
  * @param {boolean} [opts.mediaSession]  install a fake navigator.mediaSession + MediaMetadata (read back via app.media)
+ * @param {string} [opts.url]  page URL (e.g. with a #share hash)
+ * @param {(uuid:string) => any} [opts.byuuid]  Radio Browser byuuid response
+ * @param {boolean|'abort'} [opts.share]  fake navigator.share (recorded in app.shared.share)
+ * @param {boolean} [opts.clipboard]  fake navigator.clipboard (recorded in app.shared.clip)
  * @param {string} [opts.userAgent]  navigator.userAgent override
  * @param {boolean} [opts.standalone]  matchMedia('(display-mode: standalone)') matches
  * @param {boolean|'reject'} [opts.serviceWorker]  fake navigator.serviceWorker (register calls land in app.sw.registered)
@@ -104,7 +108,7 @@ function jsonResponse(data, ok = true, status = 200) {
  */
 async function loadApp(opts = {}) {
   const html = fs.readFileSync(INDEX_PATH, 'utf8');
-  const dom = new JSDOM(html, { url: 'https://m4roon3d.github.io/skyband/', runScripts: 'outside-only', pretendToBeVisual: true });
+  const dom = new JSDOM(html, { url: opts.url || 'https://m4roon3d.github.io/skyband/', runScripts: 'outside-only', pretendToBeVisual: true });
   const { window } = dom;
   await new Promise((r) => (window.document.readyState === 'complete' ? r() : window.addEventListener('load', r)));
 
@@ -146,6 +150,8 @@ async function loadApp(opts = {}) {
       const body = opts.nominatim ? await opts.nominatim(Number(sp.get('lat')), Number(sp.get('lon')), u) : { address: { city: 'Testville', state: 'Test State', country: 'Testland', country_code: 'tl' } };
       return jsonResponse(body);
     }
+    const bu = u.match(/^https:\/\/[a-z0-9]+\.api\.radio-browser\.info\/json\/stations\/byuuid\/(.+)$/);
+    if (bu) return jsonResponse(opts.byuuid ? await opts.byuuid(decodeURIComponent(bu[1])) : []);
     const m = u.match(/^(https:\/\/[a-z0-9]+\.api\.radio-browser\.info)\/json\/stations\/search\?(.*)$/);
     if (m) {
       const data = opts.radio ? await opts.radio(new URL(u).searchParams, u) : [];
@@ -180,6 +186,9 @@ async function loadApp(opts = {}) {
       get playbackState() { return media.playbackState; }, set playbackState(v) { media.playbackState = v; }
     } });
   }
+  const shared = { share: [], clip: [] };
+  if (opts.share) Object.defineProperty(window.navigator, 'share', { configurable: true, value: async (d) => { shared.share.push(d); if (opts.share === 'abort') { const e = new Error('x'); e.name = 'AbortError'; throw e; } } });
+  if (opts.clipboard) Object.defineProperty(window.navigator, 'clipboard', { configurable: true, value: { writeText: async (t) => { shared.clip.push(t); } } });
   if (opts.userAgent) Object.defineProperty(window.navigator, 'userAgent', { value: opts.userAgent, configurable: true });
   if (opts.standalone) window.matchMedia = (q) => ({ matches: /standalone/.test(q), media: q, addEventListener() {}, removeEventListener() {} });
   const sw = { registered: [] };
@@ -250,7 +259,7 @@ async function loadApp(opts = {}) {
     click: (sel) => { const el = typeof sel === 'string' ? window.document.querySelector(sel) : sel; if (!el) throw new Error(`no element: ${sel}`); el.dispatchEvent(new window.MouseEvent('click', { bubbles: true, cancelable: true })); },
     key: (key, init = {}) => window.document.dispatchEvent(new window.KeyboardEvent('keydown', { key, bubbles: true, cancelable: true, ...init })),
     /** Simulate the browser firing media events. */
-    media, sw,
+    media, sw, shared,
     audioEvent: (name) => audio.dispatchEvent(new window.Event(name)),
     toast: () => ({ text: window.document.getElementById('toast-message').textContent, hidden: window.document.getElementById('toast').classList.contains('hidden') })
   };
