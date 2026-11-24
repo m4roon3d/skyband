@@ -274,6 +274,10 @@
             <span id="tour-status-tag" class="font-mono-tech text-[9px] px-1.5 py-0.5 rounded bg-white/10 text-slate-300">OFF</span>
           </div>
         </button>
+        <div class="border-t border-white/10 pt-1.5 mt-1 px-2">
+          <span class="block text-[10px] text-slate-500 px-1 mb-1">Mood radio · worldwide</span>
+          <div id="mood-chips" class="flex flex-wrap gap-1"></div>
+        </div>
         <div class="border-t border-white/10 pt-1.5 mt-1 px-2 flex flex-wrap gap-1">
           <span class="w-full text-[10px] text-slate-500 px-1 mb-0.5">Quick Hop</span>
           <div id="quick-cities" class="flex flex-wrap gap-1"></div>
@@ -756,6 +760,7 @@
         btnLocate: document.getElementById('btn-locate'),
         btnExplore: document.getElementById('btn-explore'),
         explorePopover: document.getElementById('explore-popover'),
+        moodChips: document.getElementById('mood-chips'),
         modeSpinGlobe: document.getElementById('mode-spin-globe'),
         modeFollowNight: document.getElementById('mode-follow-night'),
         modeGoldenHour: document.getElementById('mode-golden-hour'),
@@ -827,6 +832,11 @@
         if (st && typeof st.url_resolved === 'string' && /^https?:\/\//i.test(st.url_resolved) && typeof st.stationuuid === 'string') {
           state.currentStation = st;
         }
+      }
+      // Whole-word match, so 'lima' does not fire inside 'climate' or 'rome' inside 'chrome'.
+      function containsWord(text, word) {
+        const esc = String(word).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        return new RegExp(`(^|[^\\p{L}\\p{N}])${esc}($|[^\\p{L}\\p{N}])`, 'u').test(text);
       }
       function stripAccents(s) { return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, ''); }
       function haversineKm(a, b, c, d) {
@@ -1548,7 +1558,7 @@
         else { for (const g of KNOWN_GENRES) { if (new RegExp(`\\b${g}\\b`, 'i').test(lower)) { genre = g; rem = rem.replace(new RegExp(`\\b${g}\\b`, 'gi'), ' '); break; } } }
         for (const p of ANCHOR_PLACES) {
           const names = [p.city.toLowerCase(), p.state.toLowerCase(), p.country.toLowerCase(), ...(GLOBAL_CITY_ALIASES[p.city.toLowerCase()] || [])];
-          if (names.some((n) => n.length >= 3 && lower.includes(n))) { place = p; break; }
+          if (names.some((n) => n.length >= 3 && containsWord(lower, n))) { place = p; break; }
         }
         if (place) {
           state.band = band || 'all';
@@ -1897,6 +1907,26 @@
         dom.searchDropdown.innerHTML = html; dom.searchDropdown.classList.remove('hidden');
       }
 
+      // Mood radio: each mood is a worldwide Radio Browser tag search.
+      const MOODS = [
+        { id: 'focus', label: 'Focus', tag: 'ambient' }, { id: 'chill', label: 'Chill', tag: 'chillout' },
+        { id: 'cozy', label: 'Cozy', tag: 'jazz' }, { id: 'party', label: 'Party', tag: 'dance' },
+        { id: 'workout', label: 'Workout', tag: 'electronic' }, { id: 'classical', label: 'Classical', tag: 'classical' },
+        { id: 'sleep', label: 'Sleep', tag: 'meditation' }, { id: 'world', label: 'World', tag: 'world' }
+      ];
+      function renderMoodChips() {
+        dom.moodChips.innerHTML = MOODS.map((m) => `<button type="button" data-mood="${escapeHtml(m.id)}" class="press px-2 py-0.5 rounded-lg bg-white/5 hover:bg-[#ff7a18] hover:text-slate-950 text-[10.5px] font-medium text-slate-300">${escapeHtml(m.label)}</button>`).join('');
+      }
+      function tuneMood(id) {
+        const m = MOODS.find((x) => x.id === id);
+        if (!m) return;
+        stopWorldTour(true);
+        state.scope = 'global'; state.activeTab = 'explore'; state.band = 'all'; state.genre = 'all'; state.searchQuery = m.tag;
+        dom.searchInput.value = m.tag; dom.searchClearBtn.classList.remove('hidden');
+        showToast(`${m.label} mood · worldwide`);
+        loadStationsForScope(true);
+      }
+
       function setSleepTimer(min) {
         if (state.sleepIntervalId) { clearInterval(state.sleepIntervalId); state.sleepIntervalId = null; }
         state.sleepSecondsLeft = min * 60;
@@ -1969,6 +1999,7 @@
         dom.modeFollowNight.addEventListener('click', followTheNight);
         dom.modeGoldenHour.addEventListener('click', followGoldenHour);
         dom.modeWorldTour.addEventListener('click', toggleWorldTour);
+        dom.moodChips.addEventListener('click', (ev) => { const b = ev.target.closest('[data-mood]'); if (!b) return; dom.explorePopover.classList.add('hidden'); tuneMood(b.dataset.mood); });
         dom.btnTourSkip.addEventListener('click', flyNextTourStop);
         dom.btnTourStop.addEventListener('click', () => stopWorldTour(false));
 
@@ -2131,7 +2162,7 @@
         restoreLast();
         const fs = document.getElementById('font-switcher');
         if (fs) fs.addEventListener('click', (e) => { const b = e.target.closest('.font-opt-btn'); if (b) applyFontTheme(b.dataset.font); });
-        renderQuickCities(); renderPassport(); updateAmbientUI(); updateLocationUI(); updatePlayerUI();
+        renderQuickCities(); renderMoodChips(); renderPassport(); updateAmbientUI(); updateLocationUI(); updatePlayerUI();
         bindEvents(); initVectorMap(); loadStationsForScope();
       }
 
