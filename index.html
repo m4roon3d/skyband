@@ -724,6 +724,7 @@
         tourActive: false,
         tourSecondsLeft: 45,
         tourIntervalId: null,
+        nowPlaying: null,
         ambientFx: 'off',
         fontTheme: loadStored('skyband_font', 'modern'),
         diagnostics: { mirror: 'Pending...', queriesRun: [], totalRaw: 0, fmCount: 0, amCount: 0, hlsCount: 0, highSignalCount: 0 }
@@ -1784,6 +1785,7 @@
         const sig = computeStreamReliability(st);
         dom.playerTitle.textContent = st.name; dom.playerSignalSlot.innerHTML = renderSignalInline(sig);
         dom.playerSubtitle.textContent = [st.freqLabel !== 'WEB' ? st.freqLabel : null, st.state || st.country, `${st.codec}${st.bitrate ? ' ' + st.bitrate + 'k' : ''}`].filter(Boolean).join(' · ');
+        if (state.nowPlaying && state.nowPlaying.uuid === st.stationuuid && state.nowPlaying.text) dom.playerSubtitle.textContent = '♪ ' + state.nowPlaying.text;
         const isFav = state.favorites.some((f) => f.stationuuid === st.stationuuid);
         dom.playerFavBtn.className = isFav ? 'press w-8 h-8 rounded-full bg-rose-500/15 text-rose-400 flex items-center justify-center' : 'press w-8 h-8 rounded-full hover:bg-white/10 text-slate-400 flex items-center justify-center';
         if (override === 'ERROR') dom.playerLed.className = 'w-2.5 h-2.5 rounded-full bg-rose-500 shrink-0';
@@ -1792,6 +1794,91 @@
         else dom.playerLed.className = 'w-2.5 h-2.5 rounded-full bg-slate-500 shrink-0';
         dom.btnPlayPause.innerHTML = `<i data-lucide="${state.isPlaying ? 'pause' : 'play'}" class="w-4 h-4 fill-current"></i>`;
         if (window.lucide) window.lucide.createIcons();
+        updateMediaSession(); syncNowPlayingPoll();
+      }
+
+      // ---- Now playing (track names) -------------------------------------------------
+      // Only stations whose operators publish an open, CORS-friendly feed are supported (SomaFM, KEXP).
+      // Everything fails silently: no track name just means the normal station subtitle stays.
+      const NOW_PLAYING_POLL_MS = 30000;
+      let nowPlayingTimer = null, nowPlayingSeq = 0;
+
+      function nowPlayingSource(st) {
+        const url = String((st && st.url_resolved) || '');
+        let m = url.match(/^https?:\/\/[^/]*somafm\.com\/([a-z0-9]+?)(?:-\d+)?(?:-(?:mp3|aac|aacp))?(?:[/?.]|$)/i);
+        if (m) return { kind: 'soma', id: m[1].toLowerCase() };
+        if (/^https?:\/\/[^/]*kexp[^/]*\//i.test(url)) return { kind: 'kexp' };
+        return null;
+      }
+
+      async function fetchNowPlayingText(src) {
+        if (src.kind === 'soma') {
+          const r = await fetch('https://api.somafm.com/channels.json');
+          if (!r.ok) return '';
+          const j = await r.json();
+          const ch = ((j && j.channels) || []).find((c) => c && c.id === src.id);
+          return ch && typeof ch.lastPlaying === 'string' ? ch.lastPlaying : '';
+        }
+        if (src.kind === 'kexp') {
+          const r = await fetch('https://api.kexp.org/v2/plays/?limit=1');
+          if (!r.ok) return '';
+          const j = await r.json();
+          const p = j && j.results && j.results[0];
+          if (!p || p.play_type !== 'trackplay' || !p.song) return '';
+          return p.artist ? `${p.artist} — ${p.song}` : String(p.song);
+        }
+        return '';
+      }
+
+      async function refreshNowPlaying() {
+        const st = state.currentStation;
+        const src = nowPlayingSource(st);
+        if (!st || !src) return;
+        const seq = ++nowPlayingSeq, uuid = st.stationuuid;
+        try {
+          const text = String(await fetchNowPlayingText(src) || '').trim().slice(0, 140);
+          if (seq !== nowPlayingSeq || !state.currentStation || state.currentStation.stationuuid !== uuid) return;
+          if (!text) { if (state.nowPlaying) { state.nowPlaying = null; updatePlayerUI(); } return; }
+          if (!state.nowPlaying || state.nowPlaying.uuid !== uuid || state.nowPlaying.text !== text) { state.nowPlaying = { uuid, text }; updatePlayerUI(); }
+        } catch (_e) { /* offline / blocked: keep the normal subtitle */ }
+      }
+
+      function syncNowPlayingPoll() {
+        const st = state.currentStation;
+        const active = state.isPlaying && st && nowPlayingSource(st);
+        if (state.nowPlaying && (!st || state.nowPlaying.uuid !== st.stationuuid)) state.nowPlaying = null;
+        if (!active) { if (nowPlayingTimer) { clearInterval(nowPlayingTimer); nowPlayingTimer = null; } return; }
+        if (nowPlayingTimer) return;
+        refreshNowPlaying();
+        nowPlayingTimer = setInterval(refreshNowPlaying, NOW_PLAYING_POLL_MS);
+      }
+
+      // ---- Lock-screen / headset controls (Media Session) -----------------------------
+      let mediaSessionBound = false;
+      function updateMediaSession() {
+        const ms = typeof navigator !== 'undefined' && navigator.mediaSession;
+        if (!ms) return;
+        const st = state.currentStation;
+        try {
+          if (!mediaSessionBound) {
+            mediaSessionBound = true;
+            const bind = (a, fn) => { try { ms.setActionHandler(a, fn); } catch (_e) {} };
+            bind('play', () => { if (state.currentStation && !state.isPlaying) playStation(state.currentStation); });
+            bind('pause', () => { if (state.isPlaying) dom.audio.pause(); });
+            bind('stop', () => { if (state.isPlaying) dom.audio.pause(); });
+            bind('previoustrack', () => playAdjacent(-1));
+            bind('nexttrack', () => playAdjacent(1));
+          }
+          if (!st) { ms.metadata = null; return; }
+          const track = state.nowPlaying && state.nowPlaying.uuid === st.stationuuid ? state.nowPlaying.text : '';
+          if (typeof window.MediaMetadata === 'function') {
+            ms.metadata = new window.MediaMetadata({
+              title: track || st.name, artist: track ? st.name : [st.state, st.country].filter(Boolean).join(', '), album: 'skyband',
+              artwork: [{ src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png' }, { src: 'icons/icon-512.png', sizes: '512x512', type: 'image/png' }]
+            });
+          }
+          ms.playbackState = state.isPlaying ? 'playing' : 'paused';
+        } catch (_e) { /* Media Session is a nicety, never break playback */ }
       }
 
       function renderQuickCities() {

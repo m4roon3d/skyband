@@ -23,7 +23,7 @@ const WORLD_JSON = JSON.parse(readNm('world-atlas/countries-110m.json'));
 
 const HOOK = `
 window.__sb = {
-  state, dom, ANCHOR_PLACES, pickDestination, FALLBACK_STATIONS, FEATURED_STATIONS, RADIO_MIRRORS, KNOWN_GENRES, FONT_THEMES,
+  state, dom, ANCHOR_PLACES, pickDestination, nowPlayingSource, FALLBACK_STATIONS, FEATURED_STATIONS, RADIO_MIRRORS, KNOWN_GENRES, FONT_THEMES,
   GLOBAL_CITY_ALIASES, COUNTRY_TERRESTRIAL_SEEDS,
   stripAccents, haversineKm, escapeHtml, mergeUnique, hashJitter, detectBroadcastBand,
   computeStreamReliability, normalizeStation, getLocalTimeInfo, getActivePlaceTerms,
@@ -93,6 +93,8 @@ function jsonResponse(data, ok = true, status = 200) {
  * @param {boolean} [opts.skipInit]  evaluate nothing; return the DOM only
  * @param {{w:number,h:number}} [opts.viewport]  map stage size (default 1280x800)
  * @param {() => number} [opts.random]  deterministic Math.random
+ * @param {(url:string) => any} [opts.nowPlaying]  JSON for api.somafm.com / api.kexp.org (may throw)
+ * @param {boolean} [opts.mediaSession]  install a fake navigator.mediaSession + MediaMetadata (read back via app.media)
  * @param {boolean} [opts.hlsUnsupported]  Hls.isSupported() === false
  */
 async function loadApp(opts = {}) {
@@ -144,6 +146,7 @@ async function loadApp(opts = {}) {
       const data = opts.radio ? await opts.radio(new URL(u).searchParams, u) : [];
       return jsonResponse(data);
     }
+    if (opts.nowPlaying && (u.startsWith('https://api.somafm.com/') || u.startsWith('https://api.kexp.org/'))) return jsonResponse(await opts.nowPlaying(u));
     throw new Error(`Unmocked fetch: ${u}`);
   };
 
@@ -163,6 +166,15 @@ async function loadApp(opts = {}) {
   Object.defineProperty(audio, 'src', { get: () => audio.getAttribute('src') || '', set: (v) => { calls.audio.srcs.push(v); dropPendingMediaTasks(); realSet('src', v); }, configurable: true });
 
   // ---- navigator.geolocation
+  const media = { handlers: {}, metadata: null, playbackState: 'none' };
+  if (opts.mediaSession) {
+    window.MediaMetadata = function MediaMetadata(init) { Object.assign(this, init); };
+    Object.defineProperty(window.navigator, 'mediaSession', { configurable: true, value: {
+      setActionHandler: (a, fn) => { media.handlers[a] = fn; },
+      get metadata() { return media.metadata; }, set metadata(v) { media.metadata = v; },
+      get playbackState() { return media.playbackState; }, set playbackState(v) { media.playbackState = v; }
+    } });
+  }
   if (opts.geo !== undefined) Object.defineProperty(window.navigator, 'geolocation', { value: opts.geo, configurable: true });
 
   // ---- Web Audio stub
@@ -229,6 +241,7 @@ async function loadApp(opts = {}) {
     click: (sel) => { const el = typeof sel === 'string' ? window.document.querySelector(sel) : sel; if (!el) throw new Error(`no element: ${sel}`); el.dispatchEvent(new window.MouseEvent('click', { bubbles: true, cancelable: true })); },
     key: (key, init = {}) => window.document.dispatchEvent(new window.KeyboardEvent('keydown', { key, bubbles: true, cancelable: true, ...init })),
     /** Simulate the browser firing media events. */
+    media,
     audioEvent: (name) => audio.dispatchEvent(new window.Event(name)),
     toast: () => ({ text: window.document.getElementById('toast-message').textContent, hidden: window.document.getElementById('toast').classList.contains('hidden') })
   };
