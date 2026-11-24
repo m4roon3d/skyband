@@ -323,6 +323,13 @@
         </div>
         <div class="border-t border-white/10 pt-2.5">
           <div class="flex items-center justify-between mb-1.5">
+            <span class="text-[11px] font-semibold text-white">Listening</span>
+            <span id="stats-total" class="font-mono-tech text-[10px] text-amber-300">0m</span>
+          </div>
+          <div id="stats-body" class="space-y-0.5 text-[10.5px] text-slate-400"></div>
+        </div>
+        <div class="border-t border-white/10 pt-2.5">
+          <div class="flex items-center justify-between mb-1.5">
             <span class="text-[11px] font-semibold text-white">World Passport</span>
             <span id="passport-count" class="font-mono-tech text-[10px] text-amber-300">0 countries</span>
           </div>
@@ -340,6 +347,10 @@
             <p id="location-subline" class="text-[11px] text-slate-400 truncate mt-0.5">Karnataka, India · Daytime</p>
           </div>
           <div class="flex items-center gap-1 shrink-0">
+            <button id="btn-featured" type="button" title="Featured: free official high-quality streams" aria-pressed="false" class="press px-2.5 py-1 rounded-full bg-amber-400/15 hover:bg-amber-400/25 text-amber-300 text-[11px] font-bold inline-flex items-center gap-1">
+              <i data-lucide="star" class="w-3 h-3"></i>
+              Featured
+            </button>
             <button id="btn-smart-play" type="button" title="Play strongest local signal now" class="press px-2.5 py-1 rounded-full bg-[#2ee59d]/15 hover:bg-[#2ee59d]/25 text-[#2ee59d] text-[11px] font-bold inline-flex items-center gap-1">
               <i data-lucide="play" class="w-3 h-3 fill-current"></i>
               Best
@@ -455,6 +466,9 @@
       <div class="flex items-center gap-0.5 shrink-0 pr-0.5">
         <button id="player-fav-btn" type="button" title="Save station" class="press w-8 h-8 rounded-full hover:bg-white/10 text-slate-400 flex items-center justify-center">
           <i data-lucide="heart" class="w-4 h-4"></i>
+        </button>
+        <button id="btn-share" type="button" title="Share this station and place" class="press w-8 h-8 rounded-full hover:bg-white/10 text-slate-400 flex items-center justify-center">
+          <i data-lucide="share-2" class="w-4 h-4"></i>
         </button>
         <button id="btn-player-more" type="button" title="Sound, Vibe FX &amp; Sleep Timer" class="press w-8 h-8 rounded-full hover:bg-white/10 text-slate-300 flex items-center justify-center relative">
           <i data-lucide="sliders" class="w-4 h-4"></i>
@@ -780,6 +794,8 @@
         explorePopover: document.getElementById('explore-popover'),
         moodChips: document.getElementById('mood-chips'),
         btnInstall: document.getElementById('btn-install'),
+        statsTotal: document.getElementById('stats-total'),
+        statsBody: document.getElementById('stats-body'),
         installHint: document.getElementById('install-hint'),
         modeSpinGlobe: document.getElementById('mode-spin-globe'),
         modeFollowNight: document.getElementById('mode-follow-night'),
@@ -794,6 +810,7 @@
         locationHeading: document.getElementById('location-heading'),
         locationSubline: document.getElementById('location-subline'),
         btnSmartPlay: document.getElementById('btn-smart-play'),
+        btnFeatured: document.getElementById('btn-featured'),
         btnToggleFilters: document.getElementById('btn-toggle-filters'),
         activeFilterDot: document.getElementById('active-filter-dot'),
         filterShelf: document.getElementById('filter-shelf'),
@@ -813,6 +830,7 @@
         playerSignalSlot: document.getElementById('player-signal-slot'),
         playerSubtitle: document.getElementById('player-subtitle'),
         playerFavBtn: document.getElementById('player-fav-btn'),
+        btnShare: document.getElementById('btn-share'),
         btnPrev: document.getElementById('btn-prev'),
         btnPlayPause: document.getElementById('btn-play-pause'),
         btnNext: document.getElementById('btn-next'),
@@ -1748,6 +1766,9 @@
       }
 
       function updateControlsUI() {
+        const featuredOn = state.activeTab === 'featured';
+        dom.btnFeatured.setAttribute('aria-pressed', String(featuredOn));
+        dom.btnFeatured.className = `press px-2.5 py-1 rounded-full text-[11px] font-bold inline-flex items-center gap-1 ${featuredOn ? 'bg-amber-400 text-slate-950' : 'bg-amber-400/15 hover:bg-amber-400/25 text-amber-300'}`;
         document.querySelectorAll('.nav-tab').forEach((btn) => {
           const active = btn.dataset.tab === state.activeTab;
           btn.className = active ? 'nav-tab px-2 py-0.5 rounded-md font-bold bg-white/15 text-white' : 'nav-tab px-2 py-0.5 rounded-md font-medium text-slate-400 hover:text-white';
@@ -2058,6 +2079,114 @@
         }
       }
 
+      // ---- Listening stats (stored only on this device) ------------------------------
+      const STATS_KEY = 'skyband_stats';
+      const STATS_TICK_S = 10;
+      function dayKey(d) { const x = d || new Date(); return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}`; }
+      function loadStats() {
+        const s = loadStored(STATS_KEY, null);
+        const ok = s && typeof s === 'object' && !Array.isArray(s);
+        const o = (v) => (v && typeof v === 'object' && !Array.isArray(v) ? v : {});
+        return { total: ok && Number.isFinite(s.total) ? s.total : 0, days: ok ? o(s.days) : {}, stations: ok ? o(s.stations) : {}, countries: ok ? o(s.countries) : {} };
+      }
+      function formatListen(sec) {
+        const m = Math.floor(sec / 60);
+        if (m < 1) return sec > 0 ? '<1m' : '0m';
+        return m >= 60 ? `${Math.floor(m / 60)}h ${String(m % 60).padStart(2, '0')}m` : `${m}m`;
+      }
+      function recordListening(sec) {
+        const st = state.currentStation;
+        if (!st) return;
+        const s = loadStats();
+        s.total += sec;
+        const k = dayKey(); s.days[k] = (Number(s.days[k]) || 0) + sec;
+        const sid = String(st.stationuuid), e = s.stations[sid] || { name: st.name, sec: 0 };
+        s.stations[sid] = { name: String(st.name || '').slice(0, 80), sec: (Number(e.sec) || 0) + sec };
+        if (st.country) s.countries[st.country] = (Number(s.countries[st.country]) || 0) + sec;
+        // keep the store small: last 60 days, top 50 stations
+        const dayKeys = Object.keys(s.days).sort();
+        dayKeys.slice(0, Math.max(0, dayKeys.length - 60)).forEach((d) => delete s.days[d]);
+        const top = Object.entries(s.stations).sort((a, b) => (b[1].sec || 0) - (a[1].sec || 0)).slice(0, 50);
+        s.stations = Object.fromEntries(top);
+        saveStored(STATS_KEY, s);
+      }
+      function renderStats() {
+        const s = loadStats();
+        let week = 0;
+        for (let i = 0; i < 7; i++) { const d = new Date(); d.setDate(d.getDate() - i); week += Number(s.days[dayKey(d)]) || 0; }
+        const today = Number(s.days[dayKey()]) || 0;
+        dom.statsTotal.textContent = formatListen(s.total);
+        const top = Object.values(s.stations).sort((a, b) => (b.sec || 0) - (a.sec || 0)).slice(0, 3);
+        const row = (l, v) => `<div class="flex justify-between gap-2"><span class="truncate">${escapeHtml(l)}</span><span class="text-slate-200 shrink-0">${escapeHtml(v)}</span></div>`;
+        dom.statsBody.innerHTML = row('Today', formatListen(today)) + row('Last 7 days', formatListen(week)) + row('Countries heard', String(Object.keys(s.countries).length))
+          + (top.length ? '<div class="pt-1 text-slate-500">Most played</div>' + top.map((t) => row(t.name, formatListen(t.sec || 0))).join('') : '');
+      }
+      function initStats() {
+        renderStats();
+        setInterval(() => { if (state.isPlaying) { recordListening(STATS_TICK_S); renderStats(); } }, STATS_TICK_S * 1000);
+      }
+
+      // ---- Share link ------------------------------------------------------------------
+      function buildShareUrl() {
+        const p = new URLSearchParams(), st = state.currentStation, l = state.location;
+        if (st && st.stationuuid) { p.set('u', String(st.stationuuid)); p.set('n', String(st.name || '').slice(0, 80)); }
+        if (Number.isFinite(l.lat) && Number.isFinite(l.lng)) {
+          p.set('la', l.lat.toFixed(3)); p.set('lo', l.lng.toFixed(3));
+          if (l.city) p.set('c', String(l.city).slice(0, 60));
+          if (l.country) p.set('co', String(l.country).slice(0, 60));
+          if (l.countryCode) p.set('cc', String(l.countryCode).slice(0, 2));
+        }
+        return `${window.location.origin}${window.location.pathname}#${p.toString()}`;
+      }
+      async function shareCurrent() {
+        const url = buildShareUrl(), st = state.currentStation;
+        const text = st ? `Listening to ${st.name} on skyband` : `Tuning ${state.location.city || 'the world'} on skyband`;
+        const nav = window.navigator;
+        try {
+          if (nav.share) { await nav.share({ title: 'skyband', text, url }); return; }
+        } catch (e) { if (e && e.name === 'AbortError') return; }
+        try {
+          if (nav.clipboard && nav.clipboard.writeText) { await nav.clipboard.writeText(url); showToast('Link copied'); return; }
+        } catch (_e) { /* fall through */ }
+        showToast(url);
+      }
+      async function fetchStationByUuid(uuid) {
+        if (String(uuid).startsWith('featured-')) return FEATURED_STATIONS.map(normalizeStation).find((x) => x.stationuuid === uuid) || null;
+        if (!/^[0-9a-f-]{8,40}$/i.test(uuid)) return null;
+        for (const base of RADIO_MIRRORS) {
+          try {
+            const res = await fetch(`${base}/json/stations/byuuid/${encodeURIComponent(uuid)}`);
+            if (!res.ok) continue;
+            const data = await res.json();
+            const raw = Array.isArray(data) ? data[0] : null;
+            if (!raw) continue;
+            const st = normalizeStation(raw);
+            return st.url_resolved && st.url_resolved.startsWith('https://') ? st : null;
+          } catch (_e) { /* next mirror */ }
+        }
+        return null;
+      }
+      async function applySharedLink() {
+        const h = String(window.location.hash || '').replace(/^#/, '');
+        if (!h || !/(^|&)(u|la)=/.test(h)) return;
+        const p = new URLSearchParams(h);
+        const la = Number(p.get('la')), lo = Number(p.get('lo'));
+        let moved = false;
+        if (p.get('la') !== null && Number.isFinite(la) && Number.isFinite(lo) && Math.abs(la) <= 90 && Math.abs(lo) <= 180) {
+          const cc = /^[A-Za-z]{2}$/.test(p.get('cc') || '') ? p.get('cc').toUpperCase() : '';
+          state.location = { city: (p.get('c') || 'Shared place').slice(0, 60), county: '', state: '', country: (p.get('co') || '').slice(0, 60), countryCode: cc, lat: la, lng: lo };
+          state.scope = 'city'; state.activeTab = 'explore'; moved = true;
+          updateLocationUI(); flyMapToScope(); loadStationsForScope();
+        }
+        try { window.history.replaceState(null, '', window.location.pathname + window.location.search); } catch (_e) {}
+        const uuid = p.get('u');
+        if (uuid) {
+          const st = await fetchStationByUuid(uuid);
+          if (st) { state.currentStation = st; saveLast(); updatePlayerUI(); showToast(`Shared: ${st.name}. Tap play to listen`); return; }
+          showToast('That shared station is no longer available');
+        } else if (moved) showToast(`Shared place: ${state.location.city}`);
+      }
+
       function showToast(msg, actionText, actionFn) {
         if (state.toastTimerId) clearTimeout(state.toastTimerId);
         dom.toastMessage.textContent = msg;
@@ -2152,6 +2281,7 @@
 
         dom.btnToggleFilters.addEventListener('click', () => { state.filtersOpen = !state.filtersOpen; dom.filterShelf.classList.toggle('hidden', !state.filtersOpen); });
         dom.btnVibeMatch.addEventListener('click', () => { state.vibeActive = !state.vibeActive; updateLocationUI(); renderStationList(); });
+        dom.btnFeatured.addEventListener('click', () => { state.activeTab = state.activeTab === 'featured' ? 'explore' : 'featured'; renderStationList(); });
         dom.btnSmartPlay.addEventListener('click', () => { const top = getVisibleStations().find((s) => state.sessionStreamHealth[s.stationuuid] !== 'failed'); if (top) playStation(top); });
 
         document.getElementById('scope-scrubber').addEventListener('click', (e) => {
@@ -2205,6 +2335,7 @@
         dom.volumeSlider.addEventListener('input', () => { dom.audio.volume = Number(dom.volumeSlider.value); dom.audio.muted = dom.audio.volume === 0; updateVolumeIcon(); });
         dom.btnMute.addEventListener('click', () => { dom.audio.muted = !dom.audio.muted; updateVolumeIcon(); });
         dom.alarmToggle.addEventListener('click', toggleAlarm);
+        dom.btnShare.addEventListener('click', shareCurrent);
         dom.sleepSelect.addEventListener('change', () => setSleepTimer(Number(dom.sleepSelect.value) || 0));
 
         dom.audio.addEventListener('playing', () => {
@@ -2280,8 +2411,8 @@
         restoreLast();
         const fs = document.getElementById('font-switcher');
         if (fs) fs.addEventListener('click', (e) => { const b = e.target.closest('.font-opt-btn'); if (b) applyFontTheme(b.dataset.font); });
-        renderQuickCities(); renderMoodChips(); renderPassport(); restoreAlarm(); initInstall(); updateAmbientUI(); updateLocationUI(); updatePlayerUI();
-        bindEvents(); initVectorMap(); loadStationsForScope();
+        renderQuickCities(); renderMoodChips(); renderPassport(); restoreAlarm(); initInstall(); initStats(); updateAmbientUI(); updateLocationUI(); updatePlayerUI();
+        bindEvents(); initVectorMap(); loadStationsForScope(); applySharedLink();
       }
 
       if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
