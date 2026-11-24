@@ -97,6 +97,9 @@ function jsonResponse(data, ok = true, status = 200) {
  * @param {() => number} [opts.random]  deterministic Math.random
  * @param {(url:string) => any} [opts.nowPlaying]  JSON for api.somafm.com / api.kexp.org (may throw)
  * @param {boolean} [opts.mediaSession]  install a fake navigator.mediaSession + MediaMetadata (read back via app.media)
+ * @param {string} [opts.userAgent]  navigator.userAgent override
+ * @param {boolean} [opts.standalone]  matchMedia('(display-mode: standalone)') matches
+ * @param {boolean|'reject'} [opts.serviceWorker]  fake navigator.serviceWorker (register calls land in app.sw.registered)
  * @param {boolean} [opts.hlsUnsupported]  Hls.isSupported() === false
  */
 async function loadApp(opts = {}) {
@@ -177,6 +180,10 @@ async function loadApp(opts = {}) {
       get playbackState() { return media.playbackState; }, set playbackState(v) { media.playbackState = v; }
     } });
   }
+  if (opts.userAgent) Object.defineProperty(window.navigator, 'userAgent', { value: opts.userAgent, configurable: true });
+  if (opts.standalone) window.matchMedia = (q) => ({ matches: /standalone/.test(q), media: q, addEventListener() {}, removeEventListener() {} });
+  const sw = { registered: [] };
+  if (opts.serviceWorker) Object.defineProperty(window.navigator, 'serviceWorker', { configurable: true, value: { register: (u) => { sw.registered.push(u); return opts.serviceWorker === 'reject' ? Promise.reject(new Error('nope')) : Promise.resolve({}); } } });
   if (opts.geo !== undefined) Object.defineProperty(window.navigator, 'geolocation', { value: opts.geo, configurable: true });
 
   // ---- Web Audio stub
@@ -243,7 +250,7 @@ async function loadApp(opts = {}) {
     click: (sel) => { const el = typeof sel === 'string' ? window.document.querySelector(sel) : sel; if (!el) throw new Error(`no element: ${sel}`); el.dispatchEvent(new window.MouseEvent('click', { bubbles: true, cancelable: true })); },
     key: (key, init = {}) => window.document.dispatchEvent(new window.KeyboardEvent('keydown', { key, bubbles: true, cancelable: true, ...init })),
     /** Simulate the browser firing media events. */
-    media,
+    media, sw,
     audioEvent: (name) => audio.dispatchEvent(new window.Event(name)),
     toast: () => ({ text: window.document.getElementById('toast-message').textContent, hidden: window.document.getElementById('toast').classList.contains('hidden') })
   };

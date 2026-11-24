@@ -34,7 +34,7 @@ jobs:
       - name: Assemble site (only the files the app needs)
         run: |
           mkdir _site
-          cp index.html manifest.json .nojekyll _site/
+          cp index.html manifest.json sw.js .nojekyll _site/
           cp -r icons _site/icons
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3

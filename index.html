@@ -274,6 +274,13 @@
             <span id="tour-status-tag" class="font-mono-tech text-[9px] px-1.5 py-0.5 rounded bg-white/10 text-slate-300">OFF</span>
           </div>
         </button>
+        <button id="btn-install" type="button" class="hidden w-full text-left px-3 py-2 rounded-xl hover:bg-white/10 flex items-center gap-2.5 transition">
+          <i data-lucide="download" class="w-4 h-4 text-sky-300 shrink-0"></i>
+          <div>
+            <div class="text-xs font-semibold text-white">Install skyband</div>
+            <div id="install-hint" class="text-[10.5px] text-slate-400">Add it to your home screen or desktop</div>
+          </div>
+        </button>
         <div class="border-t border-white/10 pt-1.5 mt-1 px-2">
           <span class="block text-[10px] text-slate-500 px-1 mb-1">Mood radio · worldwide</span>
           <div id="mood-chips" class="flex flex-wrap gap-1"></div>
@@ -772,6 +779,8 @@
         btnExplore: document.getElementById('btn-explore'),
         explorePopover: document.getElementById('explore-popover'),
         moodChips: document.getElementById('mood-chips'),
+        btnInstall: document.getElementById('btn-install'),
+        installHint: document.getElementById('install-hint'),
         modeSpinGlobe: document.getElementById('mode-spin-globe'),
         modeFollowNight: document.getElementById('mode-follow-night'),
         modeGoldenHour: document.getElementById('mode-golden-hour'),
@@ -2016,6 +2025,39 @@
         armAlarm(at); alarmTick();
       }
 
+      // ---- Install as an app (PWA) ---------------------------------------------------
+      let deferredInstall = null;
+      function isStandalone() {
+        return Boolean((window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone);
+      }
+      function isIosSafari() {
+        const ua = window.navigator.userAgent || '';
+        return /iPad|iPhone|iPod/.test(ua) && !/CriOS|FxiOS|EdgiOS/.test(ua);
+      }
+      function updateInstallUI() {
+        const show = !isStandalone() && (Boolean(deferredInstall) || isIosSafari());
+        dom.btnInstall.classList.toggle('hidden', !show);
+        dom.installHint.textContent = deferredInstall ? 'Add it to your home screen or desktop' : 'Tap Share, then "Add to Home Screen"';
+      }
+      async function onInstallClick() {
+        if (deferredInstall) {
+          const ev = deferredInstall; deferredInstall = null; updateInstallUI();
+          try { ev.prompt(); await ev.userChoice; } catch (_e) { /* user dismissed or browser refused */ }
+          return;
+        }
+        if (isIosSafari()) showToast('Tap the Share button, then "Add to Home Screen"');
+      }
+      function initInstall() {
+        window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredInstall = e; updateInstallUI(); });
+        window.addEventListener('appinstalled', () => { deferredInstall = null; updateInstallUI(); showToast('skyband installed'); });
+        dom.btnInstall.addEventListener('click', onInstallClick);
+        updateInstallUI();
+        // The service worker only makes skyband installable; it caches nothing. Needs https (or localhost).
+        if ('serviceWorker' in window.navigator && /^(https:|http:\/\/localhost)/.test(window.location.href)) {
+          window.navigator.serviceWorker.register('sw.js').catch(() => {});
+        }
+      }
+
       function showToast(msg, actionText, actionFn) {
         if (state.toastTimerId) clearTimeout(state.toastTimerId);
         dom.toastMessage.textContent = msg;
@@ -2238,7 +2280,7 @@
         restoreLast();
         const fs = document.getElementById('font-switcher');
         if (fs) fs.addEventListener('click', (e) => { const b = e.target.closest('.font-opt-btn'); if (b) applyFontTheme(b.dataset.font); });
-        renderQuickCities(); renderMoodChips(); renderPassport(); restoreAlarm(); updateAmbientUI(); updateLocationUI(); updatePlayerUI();
+        renderQuickCities(); renderMoodChips(); renderPassport(); restoreAlarm(); initInstall(); updateAmbientUI(); updateLocationUI(); updatePlayerUI();
         bindEvents(); initVectorMap(); loadStationsForScope();
       }
 
