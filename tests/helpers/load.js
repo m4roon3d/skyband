@@ -103,6 +103,7 @@ function jsonResponse(data, ok = true, status = 200) {
  * @param {boolean} [opts.clipboard]  fake navigator.clipboard (recorded in app.shared.clip)
  * @param {string} [opts.userAgent]  navigator.userAgent override
  * @param {boolean} [opts.standalone]  matchMedia('(display-mode: standalone)') matches
+ * @param {object[]} [opts.swRegistrations]  existing registrations returned by getRegistrations()
  * @param {boolean|'reject'} [opts.serviceWorker]  fake navigator.serviceWorker (register calls land in app.sw.registered)
  * @param {boolean} [opts.hlsUnsupported]  Hls.isSupported() === false
  */
@@ -192,7 +193,7 @@ async function loadApp(opts = {}) {
   if (opts.userAgent) Object.defineProperty(window.navigator, 'userAgent', { value: opts.userAgent, configurable: true });
   if (opts.standalone) window.matchMedia = (q) => ({ matches: /standalone/.test(q), media: q, addEventListener() {}, removeEventListener() {} });
   const sw = { registered: [] };
-  if (opts.serviceWorker) Object.defineProperty(window.navigator, 'serviceWorker', { configurable: true, value: { register: (u) => { sw.registered.push(u); return opts.serviceWorker === 'reject' ? Promise.reject(new Error('nope')) : Promise.resolve({}); } } });
+  if (opts.serviceWorker) Object.defineProperty(window.navigator, 'serviceWorker', { configurable: true, value: { getRegistrations: async () => (opts.swRegistrations || []), register: (u) => { sw.registered.push(u); return opts.serviceWorker === 'reject' ? Promise.reject(new Error('nope')) : Promise.resolve({}); } } });
   if (opts.geo !== undefined) Object.defineProperty(window.navigator, 'geolocation', { value: opts.geo, configurable: true });
 
   // ---- Web Audio stub
