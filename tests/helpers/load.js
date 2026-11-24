@@ -23,7 +23,7 @@ const WORLD_JSON = JSON.parse(readNm('world-atlas/countries-110m.json'));
 
 const HOOK = `
 window.__sb = {
-  state, dom, ANCHOR_PLACES, FALLBACK_STATIONS, RADIO_MIRRORS, KNOWN_GENRES, FONT_THEMES,
+  state, dom, ANCHOR_PLACES, FALLBACK_STATIONS, FEATURED_STATIONS, RADIO_MIRRORS, KNOWN_GENRES, FONT_THEMES,
   GLOBAL_CITY_ALIASES, COUNTRY_TERRESTRIAL_SEEDS,
   stripAccents, haversineKm, escapeHtml, mergeUnique, hashJitter, detectBroadcastBand,
   computeStreamReliability, normalizeStation, getLocalTimeInfo, getActivePlaceTerms,

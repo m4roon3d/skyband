@@ -355,6 +355,7 @@
           <div class="flex items-center justify-between gap-2">
             <div class="flex items-center gap-1 text-[11px]">
               <button data-tab="explore" type="button" class="nav-tab px-2 py-0.5 rounded-md font-semibold">Dial</button>
+              <button data-tab="featured" type="button" class="nav-tab px-2 py-0.5 rounded-md font-semibold">Featured</button>
               <button data-tab="favorites" type="button" class="nav-tab px-2 py-0.5 rounded-md font-semibold">Saved (<span id="fav-count">0</span>)</button>
               <button data-tab="recent" type="button" class="nav-tab px-2 py-0.5 rounded-md font-semibold">Log (<span id="recent-count">0</span>)</button>
             </div>
@@ -562,6 +563,40 @@
           lastcheckok: 1, ssl_error: 0, geo_lat: 52.5200, geo_long: 13.4050
         }
       ];
+
+      // Featured: stations whose broadcasters publish free, official HTTPS streams (non-commercial / public-service / listener-supported).
+      // Nothing here bypasses a paywall. Kept separate from the network results so the tab works even if Radio Browser is down.
+      const FEATURED_STATIONS = [
+        // [id, name, url, country, cc, region, tags, language, codec, bitrate, lat, lng]
+        ['soma-groove', 'SomaFM — Groove Salad', 'https://ice1.somafm.com/groovesalad-128-mp3', 'United States', 'US', 'California', 'ambient,downtempo,chillout,electronic', 'english', 'MP3', 128, 37.7749, -122.4194],
+        ['soma-drone', 'SomaFM — Drone Zone', 'https://ice1.somafm.com/dronezone-128-mp3', 'United States', 'US', 'California', 'ambient,drone,space,calm', 'english', 'MP3', 128, 37.7749, -122.4194],
+        ['soma-deepspace', 'SomaFM — Deep Space One', 'https://ice1.somafm.com/deepspaceone-128-mp3', 'United States', 'US', 'California', 'ambient,space,electronic', 'english', 'MP3', 128, 37.7749, -122.4194],
+        ['soma-secretagent', 'SomaFM — Secret Agent', 'https://ice1.somafm.com/secretagent-128-mp3', 'United States', 'US', 'California', 'lounge,spy,downtempo', 'english', 'MP3', 128, 37.7749, -122.4194],
+        ['soma-lush', 'SomaFM — Lush', 'https://ice1.somafm.com/lush-128-mp3', 'United States', 'US', 'California', 'chill,vocals,electronic', 'english', 'MP3', 128, 37.7749, -122.4194],
+        ['soma-indiepop', 'SomaFM — Indie Pop Rocks', 'https://ice1.somafm.com/indiepop-128-mp3', 'United States', 'US', 'California', 'indie,pop,rock', 'english', 'MP3', 128, 37.7749, -122.4194],
+        ['soma-7soul', 'SomaFM — Seven Inch Soul', 'https://ice1.somafm.com/7soul-128-mp3', 'United States', 'US', 'California', 'soul,funk,vintage', 'english', 'MP3', 128, 37.7749, -122.4194],
+        ['soma-folkfwd', 'SomaFM — Folk Forward', 'https://ice1.somafm.com/folkfwd-128-mp3', 'United States', 'US', 'California', 'folk,indie,acoustic', 'english', 'MP3', 128, 37.7749, -122.4194],
+        ['soma-u80s', 'SomaFM — Underground 80s', 'https://ice1.somafm.com/u80s-128-mp3', 'United States', 'US', 'California', '80s,newwave,synthpop', 'english', 'MP3', 128, 37.7749, -122.4194],
+        ['soma-sonic', 'SomaFM — Sonic Universe', 'https://ice1.somafm.com/sonicuniverse-128-mp3', 'United States', 'US', 'California', 'jazz,fusion,avant-garde', 'english', 'MP3', 128, 37.7749, -122.4194],
+        ['rp-main', 'Radio Paradise — Main Mix', 'https://stream.radioparadise.com/aac-128', 'United States', 'US', 'California', 'eclectic,rock,indie,world', 'english', 'AAC', 128, 40.8021, -124.1637],
+        ['rp-mellow', 'Radio Paradise — Mellow Mix', 'https://stream.radioparadise.com/mellow-128', 'United States', 'US', 'California', 'mellow,chill,acoustic', 'english', 'AAC', 128, 40.8021, -124.1637],
+        ['rp-rock', 'Radio Paradise — Rock Mix', 'https://stream.radioparadise.com/rock-128', 'United States', 'US', 'California', 'rock,classic rock,indie', 'english', 'AAC', 128, 40.8021, -124.1637],
+        ['rp-global', 'Radio Paradise — Global Mix', 'https://stream.radioparadise.com/global-128', 'United States', 'US', 'California', 'world,global,eclectic', 'english', 'AAC', 128, 40.8021, -124.1637],
+        ['kexp', 'KEXP Seattle', 'https://kexp.streamguys1.com/kexp160.aac', 'United States', 'US', 'Washington', 'indie,alternative,eclectic', 'english', 'AAC', 160, 47.6230, -122.3561],
+        ['jazz24', 'Jazz24', 'https://live.amperwave.net/direct/ppm-jazz24mp3-ibc1', 'United States', 'US', 'Washington', 'jazz,smooth', 'english', 'MP3', 128, 47.6097, -122.3331],
+        ['fip', 'FIP — Paris', 'https://icecast.radiofrance.fr/fip-hifi.aac', 'France', 'FR', 'Île-de-France', 'eclectic,jazz,world,pop', 'french', 'AAC', 192, 48.8566, 2.3522],
+        ['fip-jazz', 'FIP — Jazz', 'https://icecast.radiofrance.fr/fipjazz-hifi.aac', 'France', 'FR', 'Île-de-France', 'jazz', 'french', 'AAC', 192, 48.8566, 2.3522],
+        ['fip-world', 'FIP — Monde', 'https://icecast.radiofrance.fr/fipworld-hifi.aac', 'France', 'FR', 'Île-de-France', 'world,global', 'french', 'AAC', 192, 48.8566, 2.3522],
+        ['nts1', 'NTS Radio 1', 'https://stream-relay-geo.ntslive.net/stream', 'United Kingdom', 'GB', 'England', 'eclectic,electronic,underground', 'english', 'MP3', 128, 51.5074, -0.1278],
+        ['nts2', 'NTS Radio 2', 'https://stream-relay-geo.ntslive.net/stream2', 'United Kingdom', 'GB', 'England', 'eclectic,electronic,underground', 'english', 'MP3', 128, 51.5074, -0.1278],
+        ['bbc-ws', 'BBC World Service', 'https://stream.live.vc.bbcmedia.co.uk/bbc_world_service', 'United Kingdom', 'GB', 'England', 'news,talk,world', 'english', 'MP3', 128, 51.5074, -0.1278],
+        ['swiss-jazz', 'Radio Swiss Jazz', 'https://stream.srg-ssr.ch/m/rsj/mp3_128', 'Switzerland', 'CH', 'Basel', 'jazz,soul,blues', 'german', 'MP3', 128, 47.5596, 7.5886],
+        ['swiss-classic', 'Radio Swiss Classic', 'https://stream.srg-ssr.ch/m/rsc_de/mp3_128', 'Switzerland', 'CH', 'Basel', 'classical', 'german', 'MP3', 128, 47.5596, 7.5886],
+        ['swiss-pop', 'Radio Swiss Pop', 'https://stream.srg-ssr.ch/m/rsp/mp3_128', 'Switzerland', 'CH', 'Basel', 'pop,hits', 'german', 'MP3', 128, 47.5596, 7.5886]
+      ].map(([id, name, url, country, countrycode, state, tags, language, codec, bitrate, geo_lat, geo_long]) => ({
+        stationuuid: `featured-${id}`, name, url_resolved: url, country, countrycode, state, tags, language, codec, bitrate,
+        votes: 5000, clickcount: 8000, clicktrend: 0, lastcheckok: 1, ssl_error: 0, geo_lat, geo_long
+      }));
 
       const RADIO_MIRRORS = [
         'https://de1.api.radio-browser.info',
@@ -1519,7 +1554,7 @@
       }
 
       function getVisibleStations() {
-        let base = state.activeTab === 'favorites' ? state.favorites : state.activeTab === 'recent' ? state.recent : state.stations;
+        let base = state.activeTab === 'favorites' ? state.favorites : state.activeTab === 'recent' ? state.recent : state.activeTab === 'featured' ? FEATURED_STATIONS.map(normalizeStation) : state.stations;
         const localTime = getLocalTimeInfo(state.location);
         base = base.map((st) => {
           const u = { ...st, distanceKm: st.hasExactGeo ? haversineKm(state.location.lat, state.location.lng, st.geo_lat, st.geo_long) : st.isLocalMatch ? 12 : null };
@@ -1795,7 +1830,7 @@
         dom.stationList.addEventListener('click', (e) => {
           const act = e.target.closest('[data-action]'), card = e.target.closest('.station-card');
           const uuid = act ? act.dataset.uuid : card ? card.dataset.uuid : null; if (!uuid) return;
-          const st = [...state.stations, ...state.favorites, ...state.recent].find((s) => s.stationuuid === uuid); if (!st) return;
+          const st = [...getVisibleStations(), ...state.stations, ...state.favorites, ...state.recent].find((s) => s.stationuuid === uuid); if (!st) return;
           if (act && act.dataset.action === 'fav') { e.stopPropagation(); toggleFavorite(st); return; }
           playStation(st);
         });
