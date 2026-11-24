@@ -482,6 +482,16 @@
             </select>
           </div>
         </div>
+        <div class="border-t border-white/10 pt-2.5 space-y-1.5">
+          <div class="flex items-center justify-between gap-2">
+            <span class="text-slate-300">Wake-up Alarm</span>
+            <div class="flex items-center gap-1.5">
+              <input id="alarm-time" type="time" value="07:00" aria-label="Alarm time" class="bg-black/50 border border-white/10 rounded-lg px-1.5 py-0.5 text-[11px] text-slate-200 outline-none" />
+              <button id="alarm-toggle" type="button" class="press px-2 py-0.5 rounded-lg bg-[#ff7a18]/20 hover:bg-[#ff7a18]/35 text-[#ff7a18] text-[11px] font-bold">Set</button>
+            </div>
+          </div>
+          <div id="alarm-status" class="text-[10px] text-slate-500">Off · plays your current station. Keep this tab open.</div>
+        </div>
       </div>
     </div>
   </div>
@@ -729,6 +739,7 @@
         tourSecondsLeft: 45,
         tourIntervalId: null,
         nowPlaying: null,
+        alarmAt: null,
         ambientFx: 'off',
         fontTheme: loadStored('skyband_font', 'modern'),
         diagnostics: { mirror: 'Pending...', queriesRun: [], totalRaw: 0, fmCount: 0, amCount: 0, hlsCount: 0, highSignalCount: 0 }
@@ -805,6 +816,9 @@
         ambientVolume: document.getElementById('ambient-volume'),
         sleepSelect: document.getElementById('sleep-timer-select'),
         sleepCountdown: document.getElementById('sleep-countdown'),
+        alarmTime: document.getElementById('alarm-time'),
+        alarmToggle: document.getElementById('alarm-toggle'),
+        alarmStatus: document.getElementById('alarm-status'),
         toast: document.getElementById('toast'),
         toastMessage: document.getElementById('toast-message'),
         toastAction: document.getElementById('toast-action')
@@ -1941,6 +1955,67 @@
         }, 1000);
       }
 
+      // ---- Wake-up alarm ------------------------------------------------------------
+      // Browsers can't wake a sleeping phone or closed tab, so this only rings while skyband is open.
+      const ALARM_KEY = 'skyband_alarm';
+      const ALARM_GRACE_MS = 15 * 60 * 1000; // rang late because the device slept: still play if within 15 min
+      let alarmTimerId = null;
+
+      function nextAlarmTime(hhmm, from) {
+        const m = /^(\d{1,2}):(\d{2})$/.exec(String(hhmm || ''));
+        if (!m) return null;
+        const h = Number(m[1]), min = Number(m[2]);
+        if (h > 23 || min > 59) return null;
+        const d = new Date(from); d.setHours(h, min, 0, 0);
+        if (d.getTime() <= from) d.setDate(d.getDate() + 1);
+        return d.getTime();
+      }
+
+      function renderAlarm() {
+        if (!state.alarmAt) { dom.alarmToggle.textContent = 'Set'; dom.alarmStatus.textContent = 'Off · plays your current station. Keep this tab open.'; return; }
+        const mins = Math.max(0, Math.round((state.alarmAt - Date.now()) / 60000));
+        dom.alarmToggle.textContent = 'Cancel';
+        dom.alarmStatus.textContent = `Rings in ${Math.floor(mins / 60)}h ${String(mins % 60).padStart(2, '0')}m · keep this tab open`;
+      }
+
+      function fireAlarm(late) {
+        state.alarmAt = null; saveStored(ALARM_KEY, null); renderAlarm();
+        if (alarmTimerId) { clearInterval(alarmTimerId); alarmTimerId = null; }
+        if (late) { showToast('Your wake-up alarm was missed while the device was asleep'); return; }
+        showToast('Good morning! Wake-up alarm');
+        if (state.isPlaying) return;
+        const st = state.currentStation || getVisibleStations().find((x) => x.url_resolved) || FEATURED_STATIONS.map(normalizeStation)[0];
+        if (st) playStation(st);
+      }
+
+      function alarmTick() {
+        if (!state.alarmAt) return;
+        const now = Date.now();
+        if (now >= state.alarmAt) fireAlarm(now - state.alarmAt > ALARM_GRACE_MS); else renderAlarm();
+      }
+
+      function armAlarm(at) {
+        state.alarmAt = at; saveStored(ALARM_KEY, at);
+        if (alarmTimerId) clearInterval(alarmTimerId);
+        alarmTimerId = at ? setInterval(alarmTick, 10000) : null;
+        renderAlarm();
+      }
+
+      function toggleAlarm() {
+        if (state.alarmAt) { armAlarm(null); showToast('Alarm cancelled'); return; }
+        const at = nextAlarmTime(dom.alarmTime.value, Date.now());
+        if (!at) { showToast('Pick an alarm time first'); return; }
+        armAlarm(at);
+        showToast(`Alarm set for ${dom.alarmTime.value}`);
+      }
+
+      function restoreAlarm() {
+        const at = Number(loadStored(ALARM_KEY, null));
+        if (!Number.isFinite(at) || at <= 0) return;
+        if (Date.now() - at > ALARM_GRACE_MS) { saveStored(ALARM_KEY, null); return; } // long gone
+        armAlarm(at); alarmTick();
+      }
+
       function showToast(msg, actionText, actionFn) {
         if (state.toastTimerId) clearTimeout(state.toastTimerId);
         dom.toastMessage.textContent = msg;
@@ -2087,6 +2162,7 @@
         dom.playerFavBtn.addEventListener('click', () => { if (state.currentStation) toggleFavorite(state.currentStation); });
         dom.volumeSlider.addEventListener('input', () => { dom.audio.volume = Number(dom.volumeSlider.value); dom.audio.muted = dom.audio.volume === 0; updateVolumeIcon(); });
         dom.btnMute.addEventListener('click', () => { dom.audio.muted = !dom.audio.muted; updateVolumeIcon(); });
+        dom.alarmToggle.addEventListener('click', toggleAlarm);
         dom.sleepSelect.addEventListener('change', () => setSleepTimer(Number(dom.sleepSelect.value) || 0));
 
         dom.audio.addEventListener('playing', () => {
@@ -2162,7 +2238,7 @@
         restoreLast();
         const fs = document.getElementById('font-switcher');
         if (fs) fs.addEventListener('click', (e) => { const b = e.target.closest('.font-opt-btn'); if (b) applyFontTheme(b.dataset.font); });
-        renderQuickCities(); renderMoodChips(); renderPassport(); updateAmbientUI(); updateLocationUI(); updatePlayerUI();
+        renderQuickCities(); renderMoodChips(); renderPassport(); restoreAlarm(); updateAmbientUI(); updateLocationUI(); updatePlayerUI();
         bindEvents(); initVectorMap(); loadStationsForScope();
       }
 

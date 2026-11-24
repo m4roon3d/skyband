@@ -23,7 +23,7 @@ const WORLD_JSON = JSON.parse(readNm('world-atlas/countries-110m.json'));
 
 const HOOK = `
 window.__sb = {
-  state, dom, ANCHOR_PLACES, pickDestination, nowPlayingSource, containsWord, MOODS, tuneMood, FALLBACK_STATIONS, FEATURED_STATIONS, RADIO_MIRRORS, KNOWN_GENRES, FONT_THEMES,
+  state, dom, ANCHOR_PLACES, pickDestination, nowPlayingSource, containsWord, MOODS, tuneMood, nextAlarmTime, fireAlarm, FALLBACK_STATIONS, FEATURED_STATIONS, RADIO_MIRRORS, KNOWN_GENRES, FONT_THEMES,
   GLOBAL_CITY_ALIASES, COUNTRY_TERRESTRIAL_SEEDS,
   stripAccents, haversineKm, escapeHtml, mergeUnique, hashJitter, detectBroadcastBand,
   computeStreamReliability, normalizeStation, getLocalTimeInfo, getActivePlaceTerms,
@@ -57,6 +57,7 @@ function makeClock() {
     clearTimeout: (id) => { timers.delete(id); },
     clearInterval: (id) => { timers.delete(id); },
     pending: () => timers.size,
+    elapsed: () => now,
     /** Advance virtual time by ms, firing due timers in order. */
     tick(ms = 0) {
       const target = now + ms;
@@ -89,6 +90,7 @@ function jsonResponse(data, ok = true, status = 200) {
  * @param {object} [opts.geo]  fake navigator.geolocation
  * @param {object} [opts.storage]  pre-seeded localStorage entries (raw strings)
  * @param {string} [opts.now]  ISO time to freeze Date at
+ * @param {boolean} [opts.advanceDate]  with opts.now: Date moves forward as the fake clock ticks
  * @param {boolean} [opts.noLibs]  do not provide d3/topojson (simulates CDN failure)
  * @param {boolean} [opts.skipInit]  evaluate nothing; return the DOM only
  * @param {{w:number,h:number}} [opts.viewport]  map stage size (default 1280x800)
@@ -122,8 +124,8 @@ async function loadApp(opts = {}) {
     const RealDate = window.Date;
     const fixed = RealDate.parse(opts.now);
     class FixedDate extends RealDate {
-      constructor(...a) { if (a.length === 0) super(fixed); else super(...a); }
-      static now() { return fixed; }
+      constructor(...a) { if (a.length === 0) super(fixed + (opts.advanceDate ? clock.elapsed() : 0)); else super(...a); }
+      static now() { return fixed + (opts.advanceDate ? clock.elapsed() : 0); }
     }
     window.Date = FixedDate;
   }
