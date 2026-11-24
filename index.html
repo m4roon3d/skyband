@@ -806,6 +806,27 @@
 
       function loadStored(k, fb) { try { const r = localStorage.getItem(k); return r ? JSON.parse(r) : fb; } catch (_e) { return fb; } }
       function saveStored(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (_e) {} }
+
+      // Remember where the listener left off (place, scope, last station). Restored without autoplay.
+      const LAST_KEY = 'skyband_last';
+      const VALID_SCOPES = ['nearby', 'city', 'state', 'country', 'global'];
+      function saveLast() {
+        const st = state.currentStation;
+        saveStored(LAST_KEY, { location: state.location, scope: state.scope, station: st && st.url_resolved ? st : null });
+      }
+      function restoreLast() {
+        const saved = loadStored(LAST_KEY, null);
+        if (!saved || typeof saved !== 'object') return;
+        const l = saved.location;
+        if (l && typeof l.city === 'string' && Number.isFinite(l.lat) && Number.isFinite(l.lng) && Math.abs(l.lat) <= 90 && Math.abs(l.lng) <= 180) {
+          state.location = { ...state.location, ...l };
+        }
+        if (VALID_SCOPES.includes(saved.scope)) state.scope = saved.scope;
+        const st = saved.station;
+        if (st && typeof st.url_resolved === 'string' && /^https?:\/\//i.test(st.url_resolved) && typeof st.stationuuid === 'string') {
+          state.currentStation = st;
+        }
+      }
       function stripAccents(s) { return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, ''); }
       function haversineKm(a, b, c, d) {
         if (a == null || b == null || c == null || d == null) return null;
@@ -1374,6 +1395,7 @@
       let loadSeq = 0; // only the most recent load may publish results (older, slower responses are dropped)
       async function loadStationsForScope(autoPlayBest) {
         const seq = ++loadSeq;
+        saveLast();
         state.isFetching = true; state.usingFallback = false; state.diagnostics.queriesRun = [];
         renderStationList();
         try {
@@ -1587,7 +1609,7 @@
         if (state.currentStation && state.currentStation.stationuuid === st.stationuuid && state.isPlaying) { dom.audio.pause(); return; }
         state.currentStation = st; state.isLoadingAudio = true; state.isPlaying = false;
         state.recent = [st, ...state.recent.filter((r) => r.stationuuid !== st.stationuuid)].slice(0, 25);
-        updatePlayerUI(); renderStationList();
+        saveLast(); updatePlayerUI(); renderStationList();
         clearStall();
         state.stallTimeoutId = setTimeout(() => { if (state.isLoadingAudio && state.currentStation && state.currentStation.stationuuid === st.stationuuid) handleStreamError(st); }, 7000);
         try {
@@ -2019,6 +2041,7 @@
       function init() {
         if (window.lucide) window.lucide.createIcons();
         applyFontTheme(state.fontTheme);
+        restoreLast();
         const fs = document.getElementById('font-switcher');
         if (fs) fs.addEventListener('click', (e) => { const b = e.target.closest('.font-opt-btn'); if (b) applyFontTheme(b.dataset.font); });
         renderQuickCities(); renderPassport(); updateAmbientUI(); updateLocationUI(); updatePlayerUI();
