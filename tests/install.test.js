@@ -62,21 +62,19 @@ describe('install prompt', () => {
   });
 });
 
-describe('service worker', () => {
-  it('registers sw.js on https and survives a failed registration', async () => {
-    const ok = await loadApp({ serviceWorker: true });
-    assert.deepEqual(ok.sw.registered, ['sw.js']);
-    ok.close();
-    const bad = await loadApp({ serviceWorker: 'reject' });
-    await bad.flush();
-    assert.deepEqual(bad.errors, []);
-    bad.close();
+describe('no service worker', () => {
+  it('never registers one, and removes any left by an earlier version', async () => {
+    let unregistered = 0;
+    const app = await loadApp({ serviceWorker: true, swRegistrations: [{ unregister: () => { unregistered++; } }, { unregister: () => { unregistered++; } }] });
+    await app.flush();
+    assert.deepEqual(app.sw.registered, []);
+    assert.equal(unregistered, 2);
+    app.close();
   });
 
-  it('sw.js caches nothing (no stale single-file app) and is shipped by the deploy workflow', () => {
-    const sw = fs.readFileSync(path.join(__dirname, '..', 'sw.js'), 'utf8').replace(/\/\*[\s\S]*?\*\/|\/\/.*$/gm, '');
-    assert.doesNotMatch(sw, /caches\.|cache\.|respondWith/);
+  it('is not shipped: no sw.js in the repo or the deploy workflow', () => {
+    assert.equal(fs.existsSync(path.join(__dirname, '..', 'sw.js')), false);
     const wf = fs.readFileSync(path.join(__dirname, '..', '.github', 'workflows', 'pages.yml'), 'utf8');
-    assert.match(wf, /cp index\.html manifest\.json sw\.js/);
+    assert.doesNotMatch(wf, /sw\.js/);
   });
 });

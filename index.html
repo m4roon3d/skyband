@@ -2073,10 +2073,12 @@
         window.addEventListener('appinstalled', () => { deferredInstall = null; updateInstallUI(); showToast('skyband installed'); });
         dom.btnInstall.addEventListener('click', onInstallClick);
         updateInstallUI();
-        // The service worker only makes skyband installable; it caches nothing. Needs https (or localhost).
-        if ('serviceWorker' in window.navigator && /^(https:|http:\/\/localhost)/.test(window.location.href)) {
-          window.navigator.serviceWorker.register('sw.js').catch(() => {});
-        }
+        // No service worker: remove any copy a previous version registered, so nothing sits between the player and the streams.
+        try {
+          if ('serviceWorker' in window.navigator && window.navigator.serviceWorker.getRegistrations) {
+            window.navigator.serviceWorker.getRegistrations().then((rs) => rs.forEach((r) => r.unregister())).catch(() => {});
+          }
+        } catch (_e) {}
       }
 
       // ---- Listening stats (stored only on this device) ------------------------------

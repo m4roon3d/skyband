@@ -49,7 +49,7 @@ See [docs/CLAUDE_HANDOVER.md](docs/CLAUDE_HANDOVER.md) for the original handover
 - **Now playing**: track names for SomaFM and KEXP streams. Other stations don't publish an open feed, so they show the normal subtitle.
 - **Mood radio**: Explore menu, worldwide tag search (Focus, Chill, Cozy, Party, Workout, Classical, Sleep, World).
 - **Wake-up alarm**: player menu. Rings only while skyband is open in a tab; browsers can't wake a sleeping phone or closed page.
-- **Install**: Explore menu shows Install when the browser allows it (iPhone Safari shows an Add to Home Screen hint). `sw.js` caches nothing, it only makes the app installable.
+- **Install**: Explore menu shows Install when the browser allows it (iPhone Safari shows an Add to Home Screen hint). No service worker is used.
 - **Share link**: the share button in the player copies (or opens the share sheet for) a link to your station and place. Opening it loads them without autoplay.
 - **Listening stats**: Today, last 7 days, countries heard and most-played stations, in the skyband menu. Stored only in this browser.
 - **Featured chip**: one tap next to Best for the free official high-quality streams.
