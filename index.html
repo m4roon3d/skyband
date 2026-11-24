@@ -529,6 +529,89 @@
         { city: 'Bangkok', county: 'Phra Nakhon', state: 'Bangkok', country: 'Thailand', countryCode: 'TH', lat: 13.7563, lng: 100.5018, tz: 'Asia/Bangkok' }
       ];
 
+      // More stops for Spin / World Tour. [city, state/region, country, ISO code, lat, lng, IANA tz]
+      const EXTRA_ANCHOR_ROWS = [
+        ['Kolkata','West Bengal','India','IN',22.5726,88.3639,'Asia/Kolkata'],
+        ['Chennai','Tamil Nadu','India','IN',13.0827,80.2707,'Asia/Kolkata'],
+        ['Los Angeles','California','United States','US',34.0522,-118.2437,'America/Los_Angeles'],
+        ['Chicago','Illinois','United States','US',41.8781,-87.6298,'America/Chicago'],
+        ['Toronto','Ontario','Canada','CA',43.6532,-79.3832,'America/Toronto'],
+        ['Vancouver','British Columbia','Canada','CA',49.2827,-123.1207,'America/Vancouver'],
+        ['Mexico City','Mexico City','Mexico','MX',19.4326,-99.1332,'America/Mexico_City'],
+        ['Havana','La Habana','Cuba','CU',23.1136,-82.3666,'America/Havana'],
+        ['Kingston','Surrey','Jamaica','JM',17.9712,-76.7936,'America/Jamaica'],
+        ['Bogotá','Bogotá','Colombia','CO',4.7110,-74.0721,'America/Bogota'],
+        ['Lima','Lima','Peru','PE',-12.0464,-77.0428,'America/Lima'],
+        ['Santiago','Santiago Metropolitan','Chile','CL',-33.4489,-70.6693,'America/Santiago'],
+        ['Buenos Aires','Buenos Aires','Argentina','AR',-34.6037,-58.3816,'America/Argentina/Buenos_Aires'],
+        ['São Paulo','São Paulo','Brazil','BR',-23.5505,-46.6333,'America/Sao_Paulo'],
+        ['Rio de Janeiro','Rio de Janeiro','Brazil','BR',-22.9068,-43.1729,'America/Sao_Paulo'],
+        ['Montevideo','Montevideo','Uruguay','UY',-34.9011,-56.1645,'America/Montevideo'],
+        ['Madrid','Community of Madrid','Spain','ES',40.4168,-3.7038,'Europe/Madrid'],
+        ['Lisbon','Lisbon','Portugal','PT',38.7223,-9.1393,'Europe/Lisbon'],
+        ['Amsterdam','North Holland','Netherlands','NL',52.3676,4.9041,'Europe/Amsterdam'],
+        ['Brussels','Brussels','Belgium','BE',50.8503,4.3517,'Europe/Brussels'],
+        ['Zürich','Zürich','Switzerland','CH',47.3769,8.5417,'Europe/Zurich'],
+        ['Vienna','Vienna','Austria','AT',48.2082,16.3738,'Europe/Vienna'],
+        ['Prague','Prague','Czechia','CZ',50.0755,14.4378,'Europe/Prague'],
+        ['Warsaw','Masovian','Poland','PL',52.2297,21.0122,'Europe/Warsaw'],
+        ['Budapest','Budapest','Hungary','HU',47.4979,19.0402,'Europe/Budapest'],
+        ['Stockholm','Stockholm','Sweden','SE',59.3293,18.0686,'Europe/Stockholm'],
+        ['Oslo','Oslo','Norway','NO',59.9139,10.7522,'Europe/Oslo'],
+        ['Helsinki','Uusimaa','Finland','FI',60.1699,24.9384,'Europe/Helsinki'],
+        ['Copenhagen','Capital Region','Denmark','DK',55.6761,12.5683,'Europe/Copenhagen'],
+        ['Reykjavík','Capital Region','Iceland','IS',64.1466,-21.9426,'Atlantic/Reykjavik'],
+        ['Dublin','Leinster','Ireland','IE',53.3498,-6.2603,'Europe/Dublin'],
+        ['Athens','Attica','Greece','GR',37.9838,23.7275,'Europe/Athens'],
+        ['Istanbul','Istanbul','Türkiye','TR',41.0082,28.9784,'Europe/Istanbul'],
+        ['Kyiv','Kyiv','Ukraine','UA',50.4501,30.5234,'Europe/Kyiv'],
+        ['Moscow','Moscow','Russia','RU',55.7558,37.6173,'Europe/Moscow'],
+        ['Cairo','Cairo','Egypt','EG',30.0444,31.2357,'Africa/Cairo'],
+        ['Marrakesh','Marrakesh-Safi','Morocco','MA',31.6295,-7.9811,'Africa/Casablanca'],
+        ['Lagos','Lagos','Nigeria','NG',6.5244,3.3792,'Africa/Lagos'],
+        ['Accra','Greater Accra','Ghana','GH',5.6037,-0.1870,'Africa/Accra'],
+        ['Dakar','Dakar','Senegal','SN',14.7167,-17.4677,'Africa/Dakar'],
+        ['Nairobi','Nairobi','Kenya','KE',-1.2921,36.8219,'Africa/Nairobi'],
+        ['Addis Ababa','Addis Ababa','Ethiopia','ET',9.0300,38.7400,'Africa/Addis_Ababa'],
+        ['Cape Town','Western Cape','South Africa','ZA',-33.9249,18.4241,'Africa/Johannesburg'],
+        ['Dubai','Dubai','United Arab Emirates','AE',25.2048,55.2708,'Asia/Dubai'],
+        ['Tel Aviv','Tel Aviv District','Israel','IL',32.0853,34.7818,'Asia/Jerusalem'],
+        ['Tehran','Tehran','Iran','IR',35.6892,51.3890,'Asia/Tehran'],
+        ['Karachi','Sindh','Pakistan','PK',24.8607,67.0011,'Asia/Karachi'],
+        ['Dhaka','Dhaka','Bangladesh','BD',23.8103,90.4125,'Asia/Dhaka'],
+        ['Colombo','Western Province','Sri Lanka','LK',6.9271,79.8612,'Asia/Colombo'],
+        ['Kathmandu','Bagmati','Nepal','NP',27.7172,85.3240,'Asia/Kathmandu'],
+        ['Almaty','Almaty','Kazakhstan','KZ',43.2220,76.8512,'Asia/Almaty'],
+        ['Jakarta','Jakarta','Indonesia','ID',-6.2088,106.8456,'Asia/Jakarta'],
+        ['Manila','Metro Manila','Philippines','PH',14.5995,120.9842,'Asia/Manila'],
+        ['Hanoi','Hanoi','Vietnam','VN',21.0278,105.8342,'Asia/Ho_Chi_Minh'],
+        ['Kuala Lumpur','Federal Territory','Malaysia','MY',3.1390,101.6869,'Asia/Kuala_Lumpur'],
+        ['Hong Kong','Hong Kong','Hong Kong','HK',22.3193,114.1694,'Asia/Hong_Kong'],
+        ['Seoul','Seoul','South Korea','KR',37.5665,126.9780,'Asia/Seoul'],
+        ['Taipei','Taipei','Taiwan','TW',25.0330,121.5654,'Asia/Taipei'],
+        ['Shanghai','Shanghai','China','CN',31.2304,121.4737,'Asia/Shanghai'],
+        ['Ulaanbaatar','Ulaanbaatar','Mongolia','MN',47.8864,106.9057,'Asia/Ulaanbaatar'],
+        ['Sydney','New South Wales','Australia','AU',-33.8688,151.2093,'Australia/Sydney'],
+        ['Melbourne','Victoria','Australia','AU',-37.8136,144.9631,'Australia/Melbourne'],
+        ['Perth','Western Australia','Australia','AU',-31.9505,115.8605,'Australia/Perth'],
+        ['Auckland','Auckland','New Zealand','NZ',-36.8509,174.7645,'Pacific/Auckland'],
+        ['Honolulu','Hawaii','United States','US',21.3099,-157.8581,'Pacific/Honolulu'],
+        ['Anchorage','Alaska','United States','US',61.2181,-149.9003,'America/Anchorage']
+      ].map(([city, state, country, countryCode, lat, lng, tz]) => ({ city, county: city, state, country, countryCode, lat, lng, tz }));
+      ANCHOR_PLACES.push(...EXTRA_ANCHOR_ROWS);
+
+      // Next stop for Spin / World Tour: prefer a country the listener hasn't collected yet,
+      // and never the country they're currently in.
+      function pickDestination() {
+        const here = state.location && state.location.country;
+        const others = ANCHOR_PLACES.filter((p) => p.city !== (state.location && state.location.city));
+        const visited = new Set((state.passportCountries || []).map((c) => String(c.country).toLowerCase()));
+        const fresh = others.filter((p) => p.country !== here && !visited.has(p.country.toLowerCase()));
+        const abroad = others.filter((p) => p.country !== here);
+        const pool = fresh.length ? fresh : (abroad.length ? abroad : others);
+        return pool[Math.floor(Math.random() * pool.length)] || ANCHOR_PLACES[0];
+      }
+
       const FALLBACK_STATIONS = [
         {
           stationuuid: 'fallback-rp-main', name: 'Radio Paradise — Main Mix',
@@ -1403,8 +1486,7 @@
       }
 
       function flyNextTourStop() {
-        const others = ANCHOR_PLACES.filter((p) => p.city !== state.location.city);
-        const next = others[Math.floor(Math.random() * others.length)] || ANCHOR_PLACES[0];
+        const next = pickDestination();
         state.tourSecondsLeft = 45; dom.tourCountdown.textContent = '45s';
         jumpWithFlightArc(next, `World Tour → ${next.city}, ${next.country}`, true);
       }
@@ -1900,8 +1982,7 @@
 
       function spinGlobe() {
         stopWorldTour(true);
-        const others = ANCHOR_PLACES.filter((p) => p.city !== state.location.city);
-        const pick = others[Math.floor(Math.random() * others.length)] || ANCHOR_PLACES[0];
+        const pick = pickDestination();
         jumpWithFlightArc(pick, `Landed in ${pick.city}, ${pick.country}`, false);
       }
 

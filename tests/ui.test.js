@@ -160,7 +160,9 @@ describe('omnibox (natural-language tuning)', () => {
     assert.equal(cityOf(app), 'Rome');
     assert.equal(dd.classList.contains('hidden'), true);
     typeInto(app, 'calcutta');
-    assert.equal(app.document.querySelectorAll('#search-dropdown [data-pick-place]').length, 0); // Kolkata is not an anchor city
+    assert.ok(dd.querySelector('[data-pick-place="Kolkata"]')); // old name resolves to a Kolkata stop
+    typeInto(app, 'qwertyzz');
+    assert.equal(app.document.querySelectorAll('#search-dropdown [data-pick-place]').length, 0);
     typeInto(app, '');
     assert.equal(dd.classList.contains('hidden'), true);
     app.close();
